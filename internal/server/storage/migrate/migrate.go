@@ -2,12 +2,15 @@ package migrate
 
 import (
 	"database/sql"
+	"embed"
 	"fmt"
-	"os"
 
 	"github.com/pressly/goose/v3"
 	"go.uber.org/zap"
 )
+
+//go:embed migrations/*.sql
+var embedMigrations embed.FS
 
 // RunMigrations выполняет миграции базы данных при помощи Goose
 func RunMigrations(db *sql.DB, log *zap.Logger) error {
@@ -16,13 +19,13 @@ func RunMigrations(db *sql.DB, log *zap.Logger) error {
 		return fmt.Errorf("goose set dialect error: %w", err)
 	}
 
-	// Путь к папке с миграциями
-	migrationsDir := "internal/server/storage/migrations"
+	// Устанавливаем встроенную файловую систему
+	// Goose теперь будет искать файлы не на диске, а внутри переменной embedMigrations
+	goose.SetBaseFS(embedMigrations)
 
-	// Проверяем наличие директории перед запуском
-	if _, err := os.Stat(migrationsDir); os.IsNotExist(err) {
-		return fmt.Errorf("migrations directory not found at '%s': %w", migrationsDir, err)
-	}
+	// Путь к папке с миграциями внутри embed.FS
+	// Так как мы указали //go:embed migrations/*.sql, файлы лежат в виртуальной папке "migrations"
+	migrationsDir := "migrations"
 
 	log.Info("Running migrations", zap.String("dir", migrationsDir))
 

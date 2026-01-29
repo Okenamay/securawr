@@ -10,6 +10,7 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/Okenamay/securawr/internal/server/config"
 	"github.com/Okenamay/securawr/internal/server/storage/migrate"
 )
 
@@ -20,13 +21,13 @@ type Storage struct {
 }
 
 // New инициализирует пул соединений с БД и запускает миграции
-func New(dsn string, log *zap.Logger) (*Storage, error) {
+func New(conf *config.Config, log *zap.Logger) (*Storage, error) {
 	// Создаем контекст с таймаутом для подключения
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	// Парсим конфигурацию пула (позволяет настроить макс. кол-во соединений и т.д. через DSN)
-	config, err := pgxpool.ParseConfig(dsn)
+	config, err := pgxpool.ParseConfig(conf.DSN)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse pgx config: %w", err)
 	}
