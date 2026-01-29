@@ -5,22 +5,31 @@ import (
 
 	"github.com/Okenamay/securawr/internal/server/config"
 	"go.uber.org/zap"
+	"golang.org/x/crypto/acme/autocert"
 	"google.golang.org/grpc/credentials"
 )
 
+// TLSInitialize настраивает TransportCredentials с использованием autocert для автоматического получения сертификатов.
 func TLSInitialize(conf *config.Config, log *zap.Logger) (creds credentials.TransportCredentials, err error) {
-	cert, err := tls.LoadX509KeyPair(conf.CertFile, conf.KeyFile)
-
-	if err != nil {
-		log.Fatal("Failed to load TLS keys", zap.Error(err))
-		return nil, err
+	// Конфигурация менеджера autocert
+	manager := &autocert.Manager{
+		// Директория для кэширования сертификатов
+		Cache: autocert.DirCache("certs"),
+		// Функция, принимающая Terms of Service
+		Prompt: autocert.AcceptTOS,
+		// В продакшене рекомендуется ограничивать список хостов через HostPolicy
+		// HostPolicy = nil, то есть, разрешены все хосты
 	}
 
-	tlsConfig := &tls.Config{
-		Certificates: []tls.Certificate{cert},
-		MinVersion:   tls.VersionTLS13,
-	}
+	// Создаем TLS конфигурацию на базе менеджера
+	tlsConfig := manager.TLSConfig()
+
+	// Принудительно устанавливаем версию TLS 1.3
+	tlsConfig.MinVersion = tls.VersionTLS13
+
+	// Создаем gRPC учетные данные (creds) на основе TLS конфигурации
 	creds = credentials.NewTLS(tlsConfig)
 
-	return creds, err
+	log.Info("TLS configured with autocert (ACME)")
+	return creds, nil
 }
