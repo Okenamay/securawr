@@ -4,21 +4,112 @@ package securawr;
 
 option go_package = "github.com/Okenamay/securawr/gen/proto";
 
-// Определение сервиса SecuRawr
-service SecuRawrService {
-  // Ping для проверки соединения
-  rpc Ping(PingRequest) returns (PingResponse);
-  
-  // В будущем (Этап 2 и 3) здесь будут Register, Login, Sync и т.д.
+import "google/protobuf/timestamp.proto";
+
+// AuthService обрабатывает регистрацию и аутентификацию
+service AuthService {
+  // Register создаёт новый пользовательский аккаунт
+  rpc Register(RegisterRequest) returns (RegisterResponse);
+
+  // Login аутентифицирует пользователя и возвращает JWT-токен.
+  rpc Login(LoginRequest) returns (LoginResponse);
 }
 
-message PingRequest {
-  string message = 1;
+// DataService обрабатывает хранение из извлечение пользовательских данных
+service DataService {
+  // SaveData загружает на сервер новую запись о данных
+  rpc SaveData(SaveDataRequest) returns (SaveDataResponse);
+
+  // ListData возвращает метаданные для всех хранящихся записей, принадлежащих
+  // пользователю
+  rpc ListData(ListDataRequest) returns (ListDataResponse);
+
+  // GetData возвращает полное содержимое конкретной записи
+  rpc GetData(GetDataRequest) returns (GetDataResponse);
+
+  // DeleteData удаляет запись по ID
+  rpc DeleteData(DeleteDataRequest) returns (DeleteDataResponse);
 }
 
-message PingResponse {
-  string message = 1;
-  string version = 2;
+// Авторизационные сообщения
+
+message RegisterRequest {
+  string login = 1;
+  string password = 2; // На Этапе 3: Это будет Auth_Key/обмен солью
+}
+
+message RegisterResponse {
+  string user_id = 1;
+}
+
+message LoginRequest {
+  string login = 1;
+  string password = 2;
+}
+
+message LoginResponse {
+  string token = 1; // JWT токен
+}
+
+// Сообщения данных
+
+enum DataType {
+  DATA_TYPE_UNSPECIFIED = 0;
+  DATA_TYPE_TEXT = 1;        // Произвольные текстовые данные
+  DATA_TYPE_BINARY = 2;      // Файлы, фото и т.п.
+  DATA_TYPE_CARD = 3;        // Информация о банковских картах
+  DATA_TYPE_CREDENTIALS = 4; // Пары логин/пароль
+}
+
+message DataMetadata {
+  string id = 1;
+  DataType type = 2;
+  string name = 3;        // Имя файла или заголовок
+  string description = 4; // Опциональное описание пользователя
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}
+
+message SaveDataRequest {
+  DataType type = 1;
+  bytes data = 2;         // Сам контент (Этап 2: plain/base64, Этап 3: шифрованный)
+  string name = 3;
+  string description = 4;
+}
+
+message SaveDataResponse {
+  string id = 1;
+}
+
+message ListDataRequest {
+  // Опциональный фильтр по типу
+  DataType type_filter = 1; 
+}
+
+message ListDataResponse {
+  repeated DataMetadata items = 1;
+}
+
+message GetDataRequest {
+  string id = 1;
+}
+
+message GetDataResponse {
+  string id = 1;
+  DataType type = 2;
+  bytes data = 3;
+  string name = 4;
+  string description = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}
+
+message DeleteDataRequest {
+  string id = 1;
+}
+
+message DeleteDataResponse {
+  bool success = 1;
 }
 
 // Инструкция по генерации:
