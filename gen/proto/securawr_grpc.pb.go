@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.6.0
 // - protoc             v6.33.2
-// source: proto/securawr.proto
+// source: securawr.proto
 
 package proto
 
@@ -19,109 +19,419 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	SecuRawrService_Ping_FullMethodName = "/securawr.SecuRawrService/Ping"
+	AuthService_Register_FullMethodName = "/securawr.AuthService/Register"
+	AuthService_Login_FullMethodName    = "/securawr.AuthService/Login"
+	AuthService_Ping_FullMethodName     = "/securawr.AuthService/Ping"
 )
 
-// SecuRawrServiceClient is the client API for SecuRawrService service.
+// AuthServiceClient is the client API for AuthService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
-// Определение сервиса SecuRawr
-type SecuRawrServiceClient interface {
-	// Ping для проверки соединения
+// AuthService обрабатывает регистрацию и аутентификацию
+type AuthServiceClient interface {
+	// Register создаёт новый пользовательский аккаунт
+	Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error)
+	// Login аутентифицирует пользователя и возвращает JWT-токен.
+	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
+	// Ping проверяет доступность сервиса
 	Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error)
 }
 
-type secuRawrServiceClient struct {
+type authServiceClient struct {
 	cc grpc.ClientConnInterface
 }
 
-func NewSecuRawrServiceClient(cc grpc.ClientConnInterface) SecuRawrServiceClient {
-	return &secuRawrServiceClient{cc}
+func NewAuthServiceClient(cc grpc.ClientConnInterface) AuthServiceClient {
+	return &authServiceClient{cc}
 }
 
-func (c *secuRawrServiceClient) Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error) {
+func (c *authServiceClient) Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(PingResponse)
-	err := c.cc.Invoke(ctx, SecuRawrService_Ping_FullMethodName, in, out, cOpts...)
+	out := new(RegisterResponse)
+	err := c.cc.Invoke(ctx, AuthService_Register_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-// SecuRawrServiceServer is the server API for SecuRawrService service.
-// All implementations must embed UnimplementedSecuRawrServiceServer
-// for forward compatibility.
-//
-// Определение сервиса SecuRawr
-type SecuRawrServiceServer interface {
-	// Ping для проверки соединения
-	Ping(context.Context, *PingRequest) (*PingResponse, error)
-	mustEmbedUnimplementedSecuRawrServiceServer()
+func (c *authServiceClient) Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(LoginResponse)
+	err := c.cc.Invoke(ctx, AuthService_Login_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
-// UnimplementedSecuRawrServiceServer must be embedded to have
+func (c *authServiceClient) Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PingResponse)
+	err := c.cc.Invoke(ctx, AuthService_Ping_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// AuthServiceServer is the server API for AuthService service.
+// All implementations must embed UnimplementedAuthServiceServer
+// for forward compatibility.
+//
+// AuthService обрабатывает регистрацию и аутентификацию
+type AuthServiceServer interface {
+	// Register создаёт новый пользовательский аккаунт
+	Register(context.Context, *RegisterRequest) (*RegisterResponse, error)
+	// Login аутентифицирует пользователя и возвращает JWT-токен.
+	Login(context.Context, *LoginRequest) (*LoginResponse, error)
+	// Ping проверяет доступность сервиса
+	Ping(context.Context, *PingRequest) (*PingResponse, error)
+	mustEmbedUnimplementedAuthServiceServer()
+}
+
+// UnimplementedAuthServiceServer must be embedded to have
 // forward compatible implementations.
 //
 // NOTE: this should be embedded by value instead of pointer to avoid a nil
 // pointer dereference when methods are called.
-type UnimplementedSecuRawrServiceServer struct{}
+type UnimplementedAuthServiceServer struct{}
 
-func (UnimplementedSecuRawrServiceServer) Ping(context.Context, *PingRequest) (*PingResponse, error) {
+func (UnimplementedAuthServiceServer) Register(context.Context, *RegisterRequest) (*RegisterResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method Register not implemented")
+}
+func (UnimplementedAuthServiceServer) Login(context.Context, *LoginRequest) (*LoginResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method Login not implemented")
+}
+func (UnimplementedAuthServiceServer) Ping(context.Context, *PingRequest) (*PingResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Ping not implemented")
 }
-func (UnimplementedSecuRawrServiceServer) mustEmbedUnimplementedSecuRawrServiceServer() {}
-func (UnimplementedSecuRawrServiceServer) testEmbeddedByValue()                         {}
+func (UnimplementedAuthServiceServer) mustEmbedUnimplementedAuthServiceServer() {}
+func (UnimplementedAuthServiceServer) testEmbeddedByValue()                     {}
 
-// UnsafeSecuRawrServiceServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to SecuRawrServiceServer will
+// UnsafeAuthServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to AuthServiceServer will
 // result in compilation errors.
-type UnsafeSecuRawrServiceServer interface {
-	mustEmbedUnimplementedSecuRawrServiceServer()
+type UnsafeAuthServiceServer interface {
+	mustEmbedUnimplementedAuthServiceServer()
 }
 
-func RegisterSecuRawrServiceServer(s grpc.ServiceRegistrar, srv SecuRawrServiceServer) {
-	// If the following call panics, it indicates UnimplementedSecuRawrServiceServer was
+func RegisterAuthServiceServer(s grpc.ServiceRegistrar, srv AuthServiceServer) {
+	// If the following call panics, it indicates UnimplementedAuthServiceServer was
 	// embedded by pointer and is nil.  This will cause panics if an
 	// unimplemented method is ever invoked, so we test this at initialization
 	// time to prevent it from happening at runtime later due to I/O.
 	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
 		t.testEmbeddedByValue()
 	}
-	s.RegisterService(&SecuRawrService_ServiceDesc, srv)
+	s.RegisterService(&AuthService_ServiceDesc, srv)
 }
 
-func _SecuRawrService_Ping_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _AuthService_Register_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RegisterRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).Register(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_Register_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).Register(ctx, req.(*RegisterRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_Login_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(LoginRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).Login(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_Login_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).Login(ctx, req.(*LoginRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_Ping_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(PingRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(SecuRawrServiceServer).Ping(ctx, in)
+		return srv.(AuthServiceServer).Ping(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: SecuRawrService_Ping_FullMethodName,
+		FullMethod: AuthService_Ping_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SecuRawrServiceServer).Ping(ctx, req.(*PingRequest))
+		return srv.(AuthServiceServer).Ping(ctx, req.(*PingRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-// SecuRawrService_ServiceDesc is the grpc.ServiceDesc for SecuRawrService service.
+// AuthService_ServiceDesc is the grpc.ServiceDesc for AuthService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
-var SecuRawrService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "securawr.SecuRawrService",
-	HandlerType: (*SecuRawrServiceServer)(nil),
+var AuthService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "securawr.AuthService",
+	HandlerType: (*AuthServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
+			MethodName: "Register",
+			Handler:    _AuthService_Register_Handler,
+		},
+		{
+			MethodName: "Login",
+			Handler:    _AuthService_Login_Handler,
+		},
+		{
 			MethodName: "Ping",
-			Handler:    _SecuRawrService_Ping_Handler,
+			Handler:    _AuthService_Ping_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "proto/securawr.proto",
+	Metadata: "securawr.proto",
+}
+
+const (
+	DataService_SaveData_FullMethodName   = "/securawr.DataService/SaveData"
+	DataService_ListData_FullMethodName   = "/securawr.DataService/ListData"
+	DataService_GetData_FullMethodName    = "/securawr.DataService/GetData"
+	DataService_DeleteData_FullMethodName = "/securawr.DataService/DeleteData"
+)
+
+// DataServiceClient is the client API for DataService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// DataService обрабатывает хранение из извлечение пользовательских данных
+type DataServiceClient interface {
+	// SaveData загружает на сервер новую запись о данных
+	SaveData(ctx context.Context, in *SaveDataRequest, opts ...grpc.CallOption) (*SaveDataResponse, error)
+	// ListData возвращает метаданные для всех хранящихся записей, принадлежащих
+	// пользователю
+	ListData(ctx context.Context, in *ListDataRequest, opts ...grpc.CallOption) (*ListDataResponse, error)
+	// GetData возвращает полное содержимое конкретной записи
+	GetData(ctx context.Context, in *GetDataRequest, opts ...grpc.CallOption) (*GetDataResponse, error)
+	// DeleteData удаляет запись по ID
+	DeleteData(ctx context.Context, in *DeleteDataRequest, opts ...grpc.CallOption) (*DeleteDataResponse, error)
+}
+
+type dataServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewDataServiceClient(cc grpc.ClientConnInterface) DataServiceClient {
+	return &dataServiceClient{cc}
+}
+
+func (c *dataServiceClient) SaveData(ctx context.Context, in *SaveDataRequest, opts ...grpc.CallOption) (*SaveDataResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SaveDataResponse)
+	err := c.cc.Invoke(ctx, DataService_SaveData_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dataServiceClient) ListData(ctx context.Context, in *ListDataRequest, opts ...grpc.CallOption) (*ListDataResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListDataResponse)
+	err := c.cc.Invoke(ctx, DataService_ListData_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dataServiceClient) GetData(ctx context.Context, in *GetDataRequest, opts ...grpc.CallOption) (*GetDataResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetDataResponse)
+	err := c.cc.Invoke(ctx, DataService_GetData_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dataServiceClient) DeleteData(ctx context.Context, in *DeleteDataRequest, opts ...grpc.CallOption) (*DeleteDataResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteDataResponse)
+	err := c.cc.Invoke(ctx, DataService_DeleteData_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// DataServiceServer is the server API for DataService service.
+// All implementations must embed UnimplementedDataServiceServer
+// for forward compatibility.
+//
+// DataService обрабатывает хранение из извлечение пользовательских данных
+type DataServiceServer interface {
+	// SaveData загружает на сервер новую запись о данных
+	SaveData(context.Context, *SaveDataRequest) (*SaveDataResponse, error)
+	// ListData возвращает метаданные для всех хранящихся записей, принадлежащих
+	// пользователю
+	ListData(context.Context, *ListDataRequest) (*ListDataResponse, error)
+	// GetData возвращает полное содержимое конкретной записи
+	GetData(context.Context, *GetDataRequest) (*GetDataResponse, error)
+	// DeleteData удаляет запись по ID
+	DeleteData(context.Context, *DeleteDataRequest) (*DeleteDataResponse, error)
+	mustEmbedUnimplementedDataServiceServer()
+}
+
+// UnimplementedDataServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedDataServiceServer struct{}
+
+func (UnimplementedDataServiceServer) SaveData(context.Context, *SaveDataRequest) (*SaveDataResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SaveData not implemented")
+}
+func (UnimplementedDataServiceServer) ListData(context.Context, *ListDataRequest) (*ListDataResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListData not implemented")
+}
+func (UnimplementedDataServiceServer) GetData(context.Context, *GetDataRequest) (*GetDataResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetData not implemented")
+}
+func (UnimplementedDataServiceServer) DeleteData(context.Context, *DeleteDataRequest) (*DeleteDataResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteData not implemented")
+}
+func (UnimplementedDataServiceServer) mustEmbedUnimplementedDataServiceServer() {}
+func (UnimplementedDataServiceServer) testEmbeddedByValue()                     {}
+
+// UnsafeDataServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to DataServiceServer will
+// result in compilation errors.
+type UnsafeDataServiceServer interface {
+	mustEmbedUnimplementedDataServiceServer()
+}
+
+func RegisterDataServiceServer(s grpc.ServiceRegistrar, srv DataServiceServer) {
+	// If the following call panics, it indicates UnimplementedDataServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&DataService_ServiceDesc, srv)
+}
+
+func _DataService_SaveData_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SaveDataRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DataServiceServer).SaveData(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DataService_SaveData_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DataServiceServer).SaveData(ctx, req.(*SaveDataRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DataService_ListData_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListDataRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DataServiceServer).ListData(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DataService_ListData_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DataServiceServer).ListData(ctx, req.(*ListDataRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DataService_GetData_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetDataRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DataServiceServer).GetData(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DataService_GetData_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DataServiceServer).GetData(ctx, req.(*GetDataRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DataService_DeleteData_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteDataRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DataServiceServer).DeleteData(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DataService_DeleteData_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DataServiceServer).DeleteData(ctx, req.(*DeleteDataRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// DataService_ServiceDesc is the grpc.ServiceDesc for DataService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var DataService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "securawr.DataService",
+	HandlerType: (*DataServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "SaveData",
+			Handler:    _DataService_SaveData_Handler,
+		},
+		{
+			MethodName: "ListData",
+			Handler:    _DataService_ListData_Handler,
+		},
+		{
+			MethodName: "GetData",
+			Handler:    _DataService_GetData_Handler,
+		},
+		{
+			MethodName: "DeleteData",
+			Handler:    _DataService_DeleteData_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "securawr.proto",
 }

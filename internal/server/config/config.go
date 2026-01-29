@@ -9,24 +9,30 @@ import (
 
 // Дефолтные значения до применения флагов:
 const (
-	defaultGRPCPort = ":8080"
-	defaultDSN      = "postgres://user:pass@localhost:5432/securawr?sslmode=disable"
-	defaultLogLevel = "info"
+	defaultGRPCPort     = ":8080"
+	defaultDSN          = "postgres://user:pass@localhost:5432/securawr?sslmode=disable"
+	defaultLogLevel     = "info"
+	defaultServerPepper = "Cayenne&blacK"
+	defaultJWTSecret    = "3hvost@kotyaki:Qu#Oli#Ma@2025!"
 )
 
 // Config хранит конфигурацию сервера
 type Config struct {
-	GRPCPort   string
-	DSN        string
-	LogLevel   string
-	ConfigPath string
+	GRPCPort     string
+	DSN          string
+	LogLevel     string
+	ConfigPath   string
+	ServerPepper string // Секретная строка сервера для хеширования (Server_Pepper)
+	JWTSecret    string // Секрет для подписи токенов
 }
 
 // fileConfig описывает структуру JSON-файла конфигурации
 type fileConfig struct {
-	GRPCPort *string `json:"grpc_port"`
-	DSN      *string `json:"database_dsn"`
-	LogLevel *string `json:"log_level"`
+	GRPCPort     *string `json:"grpc_port"`
+	DSN          *string `json:"database_dsn"`
+	LogLevel     *string `json:"log_level"`
+	ServerPepper *string `json:"server_pepper"`
+	JWTSecret    *string `json:"jwt_secret"`
 }
 
 var (
@@ -53,10 +59,15 @@ func parseFlags() (*Config, error) {
 	config.DSN = defaultDSN
 	config.LogLevel = defaultLogLevel
 
+	config.ServerPepper = defaultServerPepper
+	config.JWTSecret = defaultJWTSecret
+
 	// 2. Определяем флаги
 	flag.StringVar(&config.GRPCPort, "port", config.GRPCPort, "Порт сервера gRPC")
 	flag.StringVar(&config.DSN, "dsn", config.DSN, "DSN БД PostgreSQL")
 	flag.StringVar(&config.LogLevel, "log-level", config.LogLevel, "Уровень лог-файла (debug, info, error)")
+	flag.StringVar(&config.ServerPepper, "pepper", config.ServerPepper, "Перец сервера для повышения защищённости данных")
+	flag.StringVar(&config.JWTSecret, "jwt-secret", config.JWTSecret, "Секрет для JWT-токена")
 
 	// Флаги работы через файл конфигурации
 	flag.StringVar(&config.ConfigPath, "config", "", "Путь к файлу конфигурации")
@@ -115,6 +126,24 @@ func parseFlags() (*Config, error) {
 			config.LogLevel = envVal
 		} else if fCfg != nil && fCfg.LogLevel != nil {
 			config.LogLevel = *fCfg.LogLevel
+		}
+	}
+
+	// ServerPepper
+	if !setFlags["pepper"] {
+		if envVal, ok := os.LookupEnv("PEPPER"); ok {
+			config.ServerPepper = envVal
+		} else if fCfg != nil && fCfg.ServerPepper != nil {
+			config.ServerPepper = *fCfg.ServerPepper
+		}
+	}
+
+	// JWTSecret
+	if !setFlags["jwt-secret"] {
+		if envVal, ok := os.LookupEnv("JWT_SECRET"); ok {
+			config.JWTSecret = envVal
+		} else if fCfg != nil && fCfg.JWTSecret != nil {
+			config.JWTSecret = *fCfg.JWTSecret
 		}
 	}
 

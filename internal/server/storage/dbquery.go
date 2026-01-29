@@ -12,18 +12,36 @@ var (
 	ErrUserExists   = errors.New("user already exists")
 )
 
-// Здесь будут методы работы с БД
-// Используем ресивер (s *Storage)
+// CreateUser сохраняет нового пользователя в БД. На Этапе 2 структура User уже
+// должна быть заполнена хешем и солью
+func (s *Storage) CreateUser(ctx context.Context, u User) error {
+	query := `
+		INSERT INTO users (id, login, password_hash, salt, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, NOW(), NOW())
+	`
+	_, err := s.Pool.Exec(ctx, query, u.ID, u.Login, u.PasswordHash, u.Salt)
+	if err != nil {
+		s.log.Error("Failed to create user", zap.Error(err), zap.String("login", u.Login))
+		return err
+	}
 
-// CreateUser - пример метода (заготовка для Этапа 2)
-func (s *Storage) CreateUser(ctx context.Context, u User) (int64, error) {
-	// TODO: Реализовать INSERT запрос
-	s.log.Debug("CreateUser called", zap.String("login", u.Login))
-	return 0, nil
+	s.log.Info("User created successfully", zap.String("login", u.Login), zap.String("id", u.ID.String()))
+	return nil
 }
 
-// GetUserByLogin - пример метода (заготовка для Этапа 2)
+// GetUserByLogin ищет пользователя по его логину
 func (s *Storage) GetUserByLogin(ctx context.Context, login string) (*User, error) {
-	// TODO: Реализовать SELECT запрос
-	return nil, ErrUserNotFound
+	query := `
+		SELECT id, login, password_hash, salt, created_at, updated_at
+		FROM users
+		WHERE login = $1
+	`
+	var u User
+	err := s.Pool.QueryRow(ctx, query, login).Scan(
+		&u.ID, &u.Login, &u.PasswordHash, &u.Salt, &u.CreatedAt, &u.UpdatedAt,
+	)
+	if err != nil {
+		return nil, ErrUserNotFound
+	}
+	return &u, nil
 }
