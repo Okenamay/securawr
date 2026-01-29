@@ -12,8 +12,6 @@ const (
 	defaultGRPCPort = ":8080"
 	defaultDSN      = "postgres://user:pass@localhost:5432/securawr?sslmode=disable"
 	defaultLogLevel = "info"
-	defaultCert     = "cert.pem"
-	defaultKey      = "key.pem"
 )
 
 // Config хранит конфигурацию сервера
@@ -21,8 +19,6 @@ type Config struct {
 	GRPCPort   string
 	DSN        string
 	LogLevel   string
-	CertFile   string
-	KeyFile    string
 	ConfigPath string
 }
 
@@ -31,8 +27,6 @@ type fileConfig struct {
 	GRPCPort *string `json:"grpc_port"`
 	DSN      *string `json:"database_dsn"`
 	LogLevel *string `json:"log_level"`
-	CertFile *string `json:"cert_file"`
-	KeyFile  *string `json:"key_file"`
 }
 
 var (
@@ -49,7 +43,7 @@ func InitConfig() (*Config, error) {
 	return cfg, initErr
 }
 
-// parseFlags загружает конфигурацию из флагов, файла и переменных окружения.
+// parseFlags загружает конфигурацию из флагов, файла и переменных окружения
 // Приоритет: Flag > Env > Config File > Default
 func parseFlags() (*Config, error) {
 	config := &Config{}
@@ -58,15 +52,11 @@ func parseFlags() (*Config, error) {
 	config.GRPCPort = defaultGRPCPort
 	config.DSN = defaultDSN
 	config.LogLevel = defaultLogLevel
-	config.CertFile = defaultCert
-	config.KeyFile = defaultKey
 
 	// 2. Определяем флаги
 	flag.StringVar(&config.GRPCPort, "port", config.GRPCPort, "Порт сервера gRPC")
 	flag.StringVar(&config.DSN, "dsn", config.DSN, "DSN БД PostgreSQL")
 	flag.StringVar(&config.LogLevel, "log-level", config.LogLevel, "Уровень лог-файла (debug, info, error)")
-	flag.StringVar(&config.CertFile, "cert", config.CertFile, "Path to TLS certificate")
-	flag.StringVar(&config.KeyFile, "key", config.KeyFile, "Path to TLS key")
 
 	// Флаги работы через файл конфигурации
 	flag.StringVar(&config.ConfigPath, "config", "", "Путь к файлу конфигурации")
@@ -99,7 +89,7 @@ func parseFlags() (*Config, error) {
 
 	// 4. Применяем значения с учетом приоритета. Если флаг установлен, он уже
 	// в config (шаг 2), и мы ничего не делаем, если нет — смотрим Env. Если
-	// нет Env — смотрим File
+	// нет Env — применяем значения из файла (шаг 3)
 
 	// GRPCPort
 	if !setFlags["port"] {
@@ -125,24 +115,6 @@ func parseFlags() (*Config, error) {
 			config.LogLevel = envVal
 		} else if fCfg != nil && fCfg.LogLevel != nil {
 			config.LogLevel = *fCfg.LogLevel
-		}
-	}
-
-	// CertFile
-	if !setFlags["cert"] {
-		if envVal, ok := os.LookupEnv("TLS_CERT"); ok {
-			config.CertFile = envVal
-		} else if fCfg != nil && fCfg.CertFile != nil {
-			config.CertFile = *fCfg.CertFile
-		}
-	}
-
-	// KeyFile
-	if !setFlags["key"] {
-		if envVal, ok := os.LookupEnv("TLS_KEY"); ok {
-			config.KeyFile = envVal
-		} else if fCfg != nil && fCfg.KeyFile != nil {
-			config.KeyFile = *fCfg.KeyFile
 		}
 	}
 

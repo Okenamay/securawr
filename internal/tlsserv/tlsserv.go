@@ -3,14 +3,13 @@ package tlsserv
 import (
 	"crypto/tls"
 
-	"github.com/Okenamay/securawr/internal/server/config"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/acme/autocert"
 	"google.golang.org/grpc/credentials"
 )
 
 // TLSInitialize настраивает TransportCredentials с использованием autocert для автоматического получения сертификатов.
-func TLSInitialize(conf *config.Config, log *zap.Logger) (creds credentials.TransportCredentials, err error) {
+func TLSInitialize(log *zap.Logger) (creds credentials.TransportCredentials, err error) {
 	// Конфигурация менеджера autocert
 	manager := &autocert.Manager{
 		// Директория для кэширования сертификатов
