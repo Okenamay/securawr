@@ -96,7 +96,7 @@ func (h *AuthHandler) Login(ctx context.Context, req *pb.LoginRequest) (*pb.Logi
 	}
 
 	// Генерируем токен
-	tokenStr, err := h.tokenManager.NewJWT(user.ID.String())
+	tokenStr, err := h.tokenManager.Generate(user.ID.String())
 	if err != nil {
 		h.logger.Error("token gen failed", zap.Error(err))
 		return nil, status.Error(codes.Internal, "internal error")

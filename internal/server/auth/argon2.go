@@ -16,6 +16,40 @@ const (
 	KeyLen       = 32
 )
 
+// GenerateSalt генерирует случайную соль (16 байт)
+func GenerateSalt() ([]byte, error) {
+	salt := make([]byte, 16)
+	if _, err := rand.Read(salt); err != nil {
+		return nil, fmt.Errorf("failed to generate random salt: %w", err)
+	}
+	return salt, nil
+}
+
+// HashPassword хеширует пароль с использованием переданной соли и перца
+func HashPassword(password string, salt []byte, pepper string) (string, error) {
+	// Смешиваем Пароль + Перец
+	inputMaterial := append([]byte(password), []byte(pepper)...)
+
+	// Хешируем
+	hash := argon2.IDKey(inputMaterial, salt, ArgonTime, ArgonMemory, ArgonThreads, KeyLen)
+
+	// Формируем PHC строку
+	b64Salt := base64.RawStdEncoding.EncodeToString(salt)
+	b64Hash := base64.RawStdEncoding.EncodeToString(hash)
+
+	encodedHash := fmt.Sprintf(
+		"$argon2id$v=%d$m=%d,t=%d,p=%d$%s$%s",
+		argon2.Version, ArgonMemory, ArgonTime, ArgonThreads, b64Salt, b64Hash,
+	)
+
+	return encodedHash, nil
+}
+
+// VerifyPassword проверяет пароль
+func VerifyPassword(password, pepper, storedHash string) (bool, error) {
+	return CheckAuthKey([]byte(password), pepper, storedHash)
+}
+
 // HashAuthKey принимает Auth_Key (полученный от клиента) и Server_Pepper
 // Возвращает хеш в формате PHC для сохранения в БД
 func HashAuthKey(authKey []byte, pepper string) (string, error) {

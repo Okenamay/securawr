@@ -17,8 +17,8 @@ type Client struct {
 	dataClient pb.DataServiceClient
 }
 
-// New создает нового клиента.
-// Если certFile пустой, используется insecure соединение (только для тестов).
+// New создает нового клиента
+// Если certFile пустой, используется insecure соединение (только для тестов)
 func New(addr string, certFile string) (*Client, error) {
 	var opts []grpc.DialOption
 
@@ -97,4 +97,22 @@ func (c *Client) Login(ctx context.Context, login string, authKey []byte) (strin
 	}
 
 	return resp.Token, resp.EncryptionSalt, nil
+}
+
+// Data Methods
+
+func (c *Client) AddData(ctx context.Context, req *pb.AddDataRequest) (*pb.AddDataResponse, error) {
+	return c.dataClient.AddData(ctx, req)
+}
+
+func (c *Client) ListData(ctx context.Context, req *pb.ListDataRequest) (*pb.ListDataResponse, error) {
+	return c.dataClient.ListData(ctx, req)
+}
+
+func (c *Client) GetData(ctx context.Context, req *pb.GetDataRequest) (*pb.GetDataResponse, error) {
+	return c.dataClient.GetData(ctx, req)
+}
+
+func (c *Client) DeleteData(ctx context.Context, req *pb.DeleteDataRequest) (*pb.DeleteDataResponse, error) {
+	return c.dataClient.DeleteData(ctx, req)
 }

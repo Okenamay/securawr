@@ -72,7 +72,13 @@ func (h *Handler) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.Re
 	// зависимости от логики протокола)
 	authSalt, err := auth.GenerateSalt()
 	if err != nil {
-		h.log.Error("Failed to generate salt", zap.Error(err))
+		h.log.Error("Failed to generate auth salt", zap.Error(err))
+		return nil, status.Error(codes.Internal, "failed to generate security parameters")
+	}
+
+	encSalt, err := auth.GenerateSalt()
+	if err != nil {
+		h.log.Error("Failed to generate encryption salt", zap.Error(err))
 		return nil, status.Error(codes.Internal, "failed to generate security parameters")
 	}
 
@@ -84,25 +90,17 @@ func (h *Handler) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.Re
 	}
 
 	// 4. Создаем пользователя
-	newID := uuid.New()
-	newUser := storage.User{
-		ID:           newID,
-		Login:        req.Login,
-		PasswordHash: hash,
-		AuthSalt:     authSalt,
-		// EncryptionSalt пока не сохраняем
-	}
-
-	if err := h.storage.CreateUser(ctx, newUser, hash, authSalt, encSalt); err != nil {
+	user, err := h.storage.CreateUser(ctx, req.Login, hash, authSalt, encSalt)
+	if err != nil {
 		h.log.Error("Failed to create user", zap.Error(err))
 		return nil, status.Error(codes.Internal, "failed to create user")
 	}
 
-	h.log.Info("User registered successfully", zap.String("user_id", newID.String()))
+	h.log.Info("User registered successfully", zap.String("user_id", user.ID.String()))
 
 	return &pb.RegisterResponse{
 		Success: true,
-		Message: "User registered with ID: " + newID.String(),
+		Message: "User registered with ID: " + user.ID.String(),
 	}, nil
 }
 
@@ -181,9 +179,11 @@ func (h *Handler) AddData(ctx context.Context, req *pb.AddDataRequest) (*pb.AddD
 		DataType: int(req.Type),
 		DataBlob: req.EncryptedData,
 		MetaInfo: metaInfo,
+		Version:  1,
 	}
 
 	if err := h.storage.CreateDataRecord(ctx, record); err != nil {
+		h.log.Error("Failed to save data", zap.Error(err))
 		return nil, status.Error(codes.Internal, "failed to save data")
 	}
 
@@ -219,7 +219,7 @@ func (h *Handler) ListData(ctx context.Context, req *pb.ListDataRequest) (*pb.Li
 			Id:        r.ID.String(),
 			Type:      pb.DataType(r.DataType),
 			MetaInfo:  r.MetaInfo,
-			CreatedAt: r.CreatedAt.Format("2006-01-02 15:04:05"), // В proto теперь string RFC3339, не Timestamp
+			CreatedAt: r.CreatedAt.Format("2006-01-02 15:04:05"),
 		})
 	}
 
@@ -245,6 +245,7 @@ func (h *Handler) GetData(ctx context.Context, req *pb.GetDataRequest) (*pb.GetD
 		if errors.Is(err, storage.ErrDataNotFound) {
 			return nil, status.Error(codes.NotFound, "data not found")
 		}
+		h.log.Error("Failed to fetch data", zap.Error(err))
 		return nil, status.Error(codes.Internal, "failed to fetch data")
 	}
 
@@ -274,6 +275,7 @@ func (h *Handler) DeleteData(ctx context.Context, req *pb.DeleteDataRequest) (*p
 		if errors.Is(err, storage.ErrDataNotFound) {
 			return nil, status.Error(codes.NotFound, "data not found")
 		}
+		h.log.Error("Failed to delete data", zap.Error(err))
 		return nil, status.Error(codes.Internal, "failed to delete data")
 	}
 

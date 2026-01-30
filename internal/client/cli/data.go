@@ -49,13 +49,11 @@ var addCmd = &cobra.Command{
 		// 3. Подключаемся к серверу
 		serverAddr := ConfigManager.GetServerAddress()
 		// Передаем функцию getToken, чтобы клиент добавил заголовок авторизации
-		conn, err := grpcclient.NewClient(serverAddr, getToken)
+		conn, err := grpcclient.New(serverAddr, getToken())
 		if err != nil {
 			return fmt.Errorf("failed to connect to server: %w", err)
 		}
 		defer conn.Close()
-
-		client := pb.NewDataServiceClient(conn)
 
 		// 4. Отправляем данные
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -80,7 +78,7 @@ var addCmd = &cobra.Command{
 			MetaInfo:      string(metaJSON),
 		}
 
-		resp, err := client.AddData(ctx, req)
+		resp, err := conn.AddData(ctx, req)
 		if err != nil {
 			return fmt.Errorf("upload failed: %w", err)
 		}
@@ -103,13 +101,11 @@ var listCmd = &cobra.Command{
 		}
 
 		serverAddr := ConfigManager.GetServerAddress()
-		conn, err := grpcclient.NewClient(serverAddr, getToken)
+		conn, err := grpcclient.New(serverAddr, getToken())
 		if err != nil {
 			return fmt.Errorf("failed to connect to server: %w", err)
 		}
 		defer conn.Close()
-
-		client := pb.NewDataServiceClient(conn)
 
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
@@ -118,7 +114,7 @@ var listCmd = &cobra.Command{
 			TypeFilter: pb.DataType_UNKNOWN, // Запрашиваем всё
 		}
 
-		resp, err := client.ListData(ctx, req)
+		resp, err := conn.ListData(ctx, req)
 		if err != nil {
 			return fmt.Errorf("failed to list data: %w", err)
 		}
@@ -164,19 +160,18 @@ var getCmd = &cobra.Command{
 		}
 
 		serverAddr := ConfigManager.GetServerAddress()
-		conn, err := grpcclient.NewClient(serverAddr, getToken)
+		conn, err := grpcclient.New(serverAddr, getToken())
 		if err != nil {
 			return fmt.Errorf("failed to connect to server: %w", err)
 		}
 		defer conn.Close()
 
-		client := pb.NewDataServiceClient(conn)
-
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
 		fmt.Printf("Downloading file %s...\n", id)
-		resp, err := client.GetData(ctx, &pb.GetDataRequest{Id: id})
+
+		resp, err := conn.GetData(ctx, &pb.GetDataRequest{Id: id})
 		if err != nil {
 			return fmt.Errorf("download failed: %w", err)
 		}
@@ -208,4 +203,10 @@ func init() {
 
 	// Флаги для команды add
 	addCmd.Flags().StringVarP(&description, "desc", "d", "", "Description of the file")
+}
+
+// Временная заглушка для получения токена
+func getToken() string {
+	// В будущем здесь будет чтение из keyring или файла
+	return ""
 }
