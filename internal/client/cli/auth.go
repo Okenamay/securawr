@@ -1,143 +1,143 @@
 package cli
 
 import (
+	"bufio"
 	"context"
+	"encoding/hex"
 	"fmt"
-	"time"
+	"os"
+	"strings"
+	"syscall"
 
-	"github.com/spf13/cobra"
-
-	pb "github.com/Okenamay/securawr/gen/proto"
 	"github.com/Okenamay/securawr/internal/client/grpcclient"
+	"github.com/Okenamay/securawr/internal/crypto"
+	"github.com/spf13/cobra"
+	"golang.org/x/term"
 )
 
-var (
-	login    string
-	password string
-)
-
-// Вспомогательная функция для получения токена из конфига
-func getToken() string {
-	if ConfigManager != nil {
-		return ConfigManager.GetToken()
-	}
-	return ""
+var authCmd = &cobra.Command{
+	Use:   "auth",
+	Short: "Authentication commands (register, login)",
 }
 
-// registerCmd представляет команду регистрации нового пользователя
 var registerCmd = &cobra.Command{
 	Use:   "register",
 	Short: "Register a new user",
-	Long:  `Create a new account in SecuRawr system. Usage: securawr register -u <login> -p <password>`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		// 1. Валидация входных данных
+	Run: func(cmd *cobra.Command, args []string) {
+		client, err := grpcclient.New(cfg.ServerAddress, cfg.CertFile)
+		if err != nil {
+			fmt.Printf("Error connecting to server: %v\n", err)
+			return
+		}
+		defer client.Close()
+
+		// 1. Ввод логина и пароля
+		login := prompt("Enter login: ")
+		password := promptPassword("Enter password: ")
 		if login == "" || password == "" {
-			return fmt.Errorf("login and password are required")
+			fmt.Println("Login and password cannot be empty")
+			return
 		}
 
-		// 2. Получаем адрес сервера из конфига (загружен в root.go)
-		serverAddr := ConfigManager.GetServerAddress()
-		fmt.Printf("Connecting to server at %s...\n", serverAddr)
-
-		// 3. Создаём соединение, передаем провайдер токена
-		conn, err := grpcclient.NewClient(serverAddr, getToken)
+		// 2. Генерация солей на клиенте
+		authSalt, err := crypto.GenerateRandomBytes(16)
 		if err != nil {
-			return fmt.Errorf("failed to connect to server: %w", err)
+			fmt.Printf("Crypto error (auth salt): %v\n", err)
+			return
 		}
-		defer conn.Close()
-
-		client := pb.NewAuthServiceClient(conn)
-
-		// 4. Выполняем запрос с таймаутом
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-
-		req := &pb.RegisterRequest{
-			Login:          login,
-			AuthKey:        []byte(password),
-			AuthSalt:       []byte{}, // Пока пусто
-			EncryptionSalt: []byte{}, // Пока пусто
-		}
-
-		resp, err := client.Register(ctx, req)
+		encSalt, err := crypto.GenerateRandomBytes(16)
 		if err != nil {
-			return fmt.Errorf("registration failed: %w", err)
+			fmt.Printf("Crypto error (enc salt): %v\n", err)
+			return
 		}
 
-		if resp.Success {
-			fmt.Println("Success!")
-			fmt.Println(resp.Message)
-		} else {
-			fmt.Println("Registration failed: " + resp.Message)
+		// 3. Вычисление Auth_Key = Argon2(pass, auth_salt)
+		authKey, err := crypto.DeriveKey([]byte(password), authSalt)
+		if err != nil {
+			fmt.Printf("KDF error: %v\n", err)
+			return
 		}
-		return nil
+
+		// 4. Отправка на сервер
+		err = client.Register(context.Background(), login, authKey, authSalt, encSalt)
+		if err != nil {
+			fmt.Printf("Registration error: %v\n", err)
+			return
+		}
+
+		fmt.Println("Registration successful! You can now login.")
 	},
 }
 
-// loginCmd представляет команду входа в систему
 var loginCmd = &cobra.Command{
 	Use:   "login",
-	Short: "Log in to the system",
-	Long:  `Authenticate with the server and save session token. Usage: securawr login -u <login> -p <password>`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		// 1. Валидация
-		if login == "" || password == "" {
-			return fmt.Errorf("login and password are required")
-		}
-
-		// 2. Подключение
-		serverAddr := ConfigManager.GetServerAddress()
-		fmt.Printf("Connecting to server at %s...\n", serverAddr)
-
-		conn, err := grpcclient.NewClient(serverAddr, getToken)
+	Short: "Login to the system",
+	Run: func(cmd *cobra.Command, args []string) {
+		client, err := grpcclient.New(cfg.ServerAddress, cfg.CertFile)
 		if err != nil {
-			return fmt.Errorf("failed to connect to server: %w", err)
+			fmt.Printf("Error connecting to server: %v\n", err)
+			return
 		}
-		defer conn.Close()
+		defer client.Close()
 
-		client := pb.NewAuthServiceClient(conn)
+		// 1. Ввод логина
+		login := prompt("Enter login: ")
 
-		// 3. Вызов метода Login
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-
-		req := &pb.LoginRequest{
-			Login:   login,
-			AuthKey: []byte(password),
-		}
-
-		resp, err := client.Login(ctx, req)
+		// 2. Запрос AuthSalt у сервера
+		fmt.Print("Fetching auth params... ")
+		authSalt, err := client.GetAuthParams(context.Background(), login)
 		if err != nil {
-			return fmt.Errorf("login failed: %w", err)
+			fmt.Printf("\nError getting auth params: %v\n", err)
+			return
+		}
+		fmt.Println("OK")
+
+		// 3. Ввод пароля и вычисление ключа
+		password := promptPassword("Enter password: ")
+		authKey, err := crypto.DeriveKey([]byte(password), authSalt)
+		if err != nil {
+			fmt.Printf("KDF error: %v\n", err)
+			return
 		}
 
-		// 4. Сохранение токена
-		if err := ConfigManager.SetToken(resp.Token); err != nil {
-			return fmt.Errorf("failed to save token to config: %w", err)
+		// 4. Логин
+		token, encSalt, err := client.Login(context.Background(), login, authKey)
+		if err != nil {
+			fmt.Printf("Login failed: %v\n", err)
+			return
 		}
 
-		fmt.Println("Login successful! Session token saved.")
-		return nil
+		// 5. Сохранение результата
+		fmt.Printf("Login successful!\nToken: %s...\n", token[:10])
+
+		// TODO: Сохранить token и encSalt в локальный файл конфигурации
+		// (реализация сохранения зависит от структуры storage/config)
+		fmt.Printf("Encryption Salt received: %s\n", hex.EncodeToString(encSalt))
+		fmt.Println("Session saved (mock).")
 	},
 }
 
 func init() {
-	// Регистрируем команду registerCmd
-	rootCmd.AddCommand(registerCmd)
+	authCmd.AddCommand(registerCmd)
+	authCmd.AddCommand(loginCmd)
+	rootCmd.AddCommand(authCmd)
+}
 
-	// Настраиваем флаги
-	registerCmd.Flags().StringVarP(&login, "user", "u", "", "Username (login)")
-	registerCmd.Flags().StringVarP(&password, "password", "p", "", "Password")
-	registerCmd.MarkFlagRequired("user")
-	registerCmd.MarkFlagRequired("password")
+// Вспомогательные функции для ввода
 
-	// Регистрируем команду loginCmd
-	rootCmd.AddCommand(loginCmd)
+func prompt(label string) string {
+	fmt.Print(label)
+	reader := bufio.NewReader(os.Stdin)
+	text, _ := reader.ReadString('\n')
+	return strings.TrimSpace(text)
+}
 
-	// Переиспользуем переменные login/password, так как команды не запускаются
-	// одновременно
-	loginCmd.Flags().StringVarP(&login, "user", "u", "", "Username (login)")
-	loginCmd.Flags().StringVarP(&password, "password", "p", "", "Password")
-	loginCmd.MarkFlagRequired("user")
-	loginCmd.MarkFlagRequired("password")
+func promptPassword(label string) string {
+	fmt.Print(label)
+	bytePassword, err := term.ReadPassword(int(syscall.Stdin))
+	if err != nil {
+		return ""
+	}
+	fmt.Println() // Перенос строки после ввода пароля
+	return string(bytePassword)
 }

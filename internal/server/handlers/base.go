@@ -22,7 +22,7 @@ type Handler struct {
 	pb.UnimplementedAuthServiceServer
 	pb.UnimplementedDataServiceServer
 
-	storage      *storage.Storage
+	storage      *storage.PostgresDB
 	log          *zap.Logger
 	cfg          *config.Config
 	tokenManager *token.Manager

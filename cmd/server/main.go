@@ -43,7 +43,6 @@ func main() {
 	defer store.Close()
 
 	// 4. Запуск TLS 1.3
-
 	creds, err := tlsserv.TLSInitialize(log)
 	if err != nil {
 		log.Fatal("Failed to initialize TLS server", zap.Error(err))

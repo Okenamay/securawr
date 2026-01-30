@@ -30,7 +30,7 @@ type DataRecord struct {
 	UpdatedAt time.Time `db:"updated_at"`
 }
 
-// DataMeta - вспомогательная структура для парсинга столбца MetaInfo
+// DataMeta - вспомогательная структура для парсинга поля MetaInfo
 type DataMeta struct {
 	Filename    string `json:"filename,omitempty"`
 	Description string `json:"description,omitempty"`

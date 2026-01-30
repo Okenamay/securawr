@@ -4,105 +4,76 @@ import (
 	"crypto/rand"
 	"crypto/subtle"
 	"encoding/base64"
-	"errors"
 	"fmt"
-	"strings"
 
 	"golang.org/x/crypto/argon2"
 )
 
-// Параметры Argon2id согласно Дизайн-документу
 const (
-	ArgonTime    = 3
-	ArgonMemory  = 64 * 1024 // 64 MB
-	ArgonThreads = 4
-	SaltLength   = 16
-	KeyLength    = 32
+	ArgonTime    = 1
+	ArgonMemory  = 64 * 1024
+	ArgonThreads = 2
+	KeyLen       = 32
 )
 
-// HashPassword создает хеш из ключа (auth_key), соли и серверного перца.
-// Использует формат: $argon2id$v=19$m=65536,t=3,p=4$salt$hash
-func HashPassword(authKey, salt, pepper string) (string, error) {
-	saltBytes, err := base64.RawStdEncoding.DecodeString(salt)
-	if err != nil {
-		return "", fmt.Errorf("failed to decode salt: %w", err)
+// HashAuthKey принимает Auth_Key (полученный от клиента) и Server_Pepper
+// Возвращает хеш в формате PHC для сохранения в БД
+func HashAuthKey(authKey []byte, pepper string) (string, error) {
+	// 1. Генерируем случайную соль для этого хеша (хранится в поле
+	// password_hash)
+	salt := make([]byte, 16)
+	if _, err := rand.Read(salt); err != nil {
+		return "", fmt.Errorf("failed to generate random salt: %w", err)
 	}
 
-	// Смешиваем ключ клиента с серверным перцем перед хешированием
-	combinedKey := authKey + pepper
+	// 2. Смешиваем Auth_Key и Pepper
+	inputMaterial := append(authKey, []byte(pepper)...)
 
-	hash := argon2.IDKey(
-		[]byte(combinedKey),
-		saltBytes,
-		ArgonTime,
-		ArgonMemory,
-		ArgonThreads,
-		KeyLength,
-	)
+	// 3. Хешируем
+	hash := argon2.IDKey(inputMaterial, salt, ArgonTime, ArgonMemory, ArgonThreads, KeyLen)
 
+	// 4. Формируем строку: $argon2id$v=...$m=...$salt$hash
+	b64Salt := base64.RawStdEncoding.EncodeToString(salt)
 	b64Hash := base64.RawStdEncoding.EncodeToString(hash)
 
-	// Формируем строку для хранения в БД
 	encodedHash := fmt.Sprintf(
 		"$argon2id$v=%d$m=%d,t=%d,p=%d$%s$%s",
-		argon2.Version,
-		ArgonMemory,
-		ArgonTime,
-		ArgonThreads,
-		salt,
-		b64Hash,
+		argon2.Version, ArgonMemory, ArgonTime, ArgonThreads, b64Salt, b64Hash,
 	)
 
 	return encodedHash, nil
 }
 
-// VerifyPassword проверяет соответствие ключа сохраненному хешу
-func VerifyPassword(authKey, pepper, encodedHash string) (bool, error) {
-	parts := strings.Split(encodedHash, "$")
-	if len(parts) != 6 {
-		return false, errors.New("invalid hash format")
-	}
-
-	// Извлекаем параметры из закодированной строки
+// CheckAuthKey проверяет валидность ключа.
+func CheckAuthKey(authKey []byte, pepper string, storedHash string) (bool, error) {
 	var version, memory, time, threads int
-	_, err := fmt.Sscanf(parts[2], "v=%d", &version)
+	var b64Salt, b64Hash string
+
+	// Парсим строку хеша
+	_, err := fmt.Sscanf(storedHash, "$argon2id$v=%d$m=%d,t=%d,p=%d$%[^$]$%s",
+		&version, &memory, &time, &threads, &b64Salt, &b64Hash)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("invalid hash format: %w", err)
 	}
-	_, err = fmt.Sscanf(parts[3], "m=%d,t=%d,p=%d", &memory, &time, &threads)
+
+	salt, err := base64.RawStdEncoding.DecodeString(b64Salt)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("invalid salt encoding: %w", err)
 	}
 
-	saltBytes, err := base64.RawStdEncoding.DecodeString(parts[4])
+	decodedHash, err := base64.RawStdEncoding.DecodeString(b64Hash)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("invalid hash encoding: %w", err)
 	}
 
-	decodedHash, err := base64.RawStdEncoding.DecodeString(parts[5])
-	if err != nil {
-		return false, err
+	// Повторяем хеширование
+	inputMaterial := append(authKey, []byte(pepper)...)
+	calculatedHash := argon2.IDKey(inputMaterial, salt, uint32(time), uint32(memory), uint8(threads), uint32(len(decodedHash)))
+
+	// Сравнение за константное время
+	if subtle.ConstantTimeCompare(decodedHash, calculatedHash) == 1 {
+		return true, nil
 	}
 
-	combinedKey := authKey + pepper
-	comparisonHash := argon2.IDKey(
-		[]byte(combinedKey),
-		saltBytes,
-		uint32(time),
-		uint32(memory),
-		uint8(threads),
-		uint32(len(decodedHash)),
-	)
-
-	// Побитовое сравнение для предотвращения атак по времени
-	return subtle.ConstantTimeCompare(decodedHash, comparisonHash) == 1, nil
-}
-
-// GenerateSalt создает новую случайную соль в base64
-func GenerateSalt() (string, error) {
-	b := make([]byte, SaltLength)
-	if _, err := rand.Read(b); err != nil {
-		return "", err
-	}
-	return base64.RawStdEncoding.EncodeToString(b), nil
+	return false, nil
 }
