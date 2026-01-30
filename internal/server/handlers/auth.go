@@ -17,13 +17,13 @@ import (
 
 type AuthHandler struct {
 	pb.UnimplementedAuthServiceServer
-	db           *storage.PostgresDB
+	db           *storage.Storage
 	cfg          *config.Config
 	logger       *zap.Logger
 	tokenManager *token.Manager
 }
 
-func NewAuthHandler(db *storage.PostgresDB, cfg *config.Config, logger *zap.Logger, tm *token.Manager) *AuthHandler {
+func NewAuthHandler(db *storage.Storage, cfg *config.Config, logger *zap.Logger, tm *token.Manager) *AuthHandler {
 	return &AuthHandler{
 		db:           db,
 		cfg:          cfg,

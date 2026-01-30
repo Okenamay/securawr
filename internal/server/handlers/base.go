@@ -22,7 +22,7 @@ type Handler struct {
 	pb.UnimplementedAuthServiceServer
 	pb.UnimplementedDataServiceServer
 
-	storage      *storage.PostgresDB
+	storage      *storage.Storage
 	log          *zap.Logger
 	cfg          *config.Config
 	tokenManager *token.Manager
@@ -93,7 +93,7 @@ func (h *Handler) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.Re
 		// EncryptionSalt пока не сохраняем
 	}
 
-	if err := h.storage.CreateUser(ctx, newUser); err != nil {
+	if err := h.storage.CreateUser(ctx, newUser, hash, authSalt, encSalt); err != nil {
 		h.log.Error("Failed to create user", zap.Error(err))
 		return nil, status.Error(codes.Internal, "failed to create user")
 	}

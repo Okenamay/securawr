@@ -2,6 +2,9 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"go.uber.org/zap"
 
@@ -48,6 +51,26 @@ func main() {
 		log.Fatal("Failed to initialize TLS server", zap.Error(err))
 	}
 
-	// 5. Запуск gRPC сервера
-	grpcserv.RunServer(conf, log, creds, store)
+	// 5. Инициализация gRPC сервера
+	server, err := grpcserv.New(conf, log, creds, store)
+	if err != nil {
+		log.Fatal("Failed to create gRPC server", zap.Error(err))
+	}
+
+	// 6. Запуск gRPC сервера
+	go func() {
+		if err := server.Start(); err != nil {
+			log.Fatal("Server failed to start", zap.Error(err))
+		}
+	}()
+
+	// 7. Graceful Shutdown
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+	<-stop
+
+	log.Info("Shutting down server...")
+	server.Stop()
+	log.Info("Server stopped")
+
 }

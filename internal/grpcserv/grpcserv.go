@@ -30,7 +30,7 @@ func New(
 	conf *config.Config,
 	logger *zap.Logger,
 	creds credentials.TransportCredentials,
-	db *storage.PostgresDB,
+	db *storage.Storage,
 ) (*Server, error) {
 
 	// 1. Инициализация Token Manager (24 часа TTL)
