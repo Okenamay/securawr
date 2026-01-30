@@ -25,28 +25,28 @@ const (
 type DataType int32
 
 const (
-	DataType_DATA_TYPE_UNSPECIFIED DataType = 0
-	DataType_DATA_TYPE_TEXT        DataType = 1 // Произвольные текстовые данные
-	DataType_DATA_TYPE_BINARY      DataType = 2 // Файлы, фото и т.п.
-	DataType_DATA_TYPE_CARD        DataType = 3 // Информация о банковских картах
-	DataType_DATA_TYPE_CREDENTIALS DataType = 4 // Пары логин/пароль
+	DataType_UNKNOWN     DataType = 0
+	DataType_TEXT        DataType = 1 // Произвольные текстовые данные
+	DataType_BINARY      DataType = 2 // Файлы, фото и т.п.
+	DataType_BANK_CARD   DataType = 3 // Информация о банковских картах
+	DataType_CREDENTIALS DataType = 4 // Пары логин/пароль
 )
 
 // Enum value maps for DataType.
 var (
 	DataType_name = map[int32]string{
-		0: "DATA_TYPE_UNSPECIFIED",
-		1: "DATA_TYPE_TEXT",
-		2: "DATA_TYPE_BINARY",
-		3: "DATA_TYPE_CARD",
-		4: "DATA_TYPE_CREDENTIALS",
+		0: "UNKNOWN",
+		1: "TEXT",
+		2: "BINARY",
+		3: "BANK_CARD",
+		4: "CREDENTIALS",
 	}
 	DataType_value = map[string]int32{
-		"DATA_TYPE_UNSPECIFIED": 0,
-		"DATA_TYPE_TEXT":        1,
-		"DATA_TYPE_BINARY":      2,
-		"DATA_TYPE_CARD":        3,
-		"DATA_TYPE_CREDENTIALS": 4,
+		"UNKNOWN":     0,
+		"TEXT":        1,
+		"BINARY":      2,
+		"BANK_CARD":   3,
+		"CREDENTIALS": 4,
 	}
 )
 
@@ -77,17 +77,108 @@ func (DataType) EnumDescriptor() ([]byte, []int) {
 	return file_securawr_proto_rawDescGZIP(), []int{0}
 }
 
-type RegisterRequest struct {
+type AuthParamsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Login         string                 `protobuf:"bytes,1,opt,name=login,proto3" json:"login,omitempty"`
-	Password      string                 `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"` // На Этапе 3: Это будет Auth_Key/обмен солью
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
+func (x *AuthParamsRequest) Reset() {
+	*x = AuthParamsRequest{}
+	mi := &file_securawr_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AuthParamsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AuthParamsRequest) ProtoMessage() {}
+
+func (x *AuthParamsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_securawr_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AuthParamsRequest.ProtoReflect.Descriptor instead.
+func (*AuthParamsRequest) Descriptor() ([]byte, []int) {
+	return file_securawr_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *AuthParamsRequest) GetLogin() string {
+	if x != nil {
+		return x.Login
+	}
+	return ""
+}
+
+type AuthParamsResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// AuthSalt нужна клиенту для вычисления Auth_Key из введенного пароля
+	AuthSalt      []byte `protobuf:"bytes,1,opt,name=auth_salt,json=authSalt,proto3" json:"auth_salt,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AuthParamsResponse) Reset() {
+	*x = AuthParamsResponse{}
+	mi := &file_securawr_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AuthParamsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AuthParamsResponse) ProtoMessage() {}
+
+func (x *AuthParamsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_securawr_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AuthParamsResponse.ProtoReflect.Descriptor instead.
+func (*AuthParamsResponse) Descriptor() ([]byte, []int) {
+	return file_securawr_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *AuthParamsResponse) GetAuthSalt() []byte {
+	if x != nil {
+		return x.AuthSalt
+	}
+	return nil
+}
+
+type RegisterRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Login          string                 `protobuf:"bytes,1,opt,name=login,proto3" json:"login,omitempty"`
+	AuthKey        []byte                 `protobuf:"bytes,2,opt,name=auth_key,json=authKey,proto3" json:"auth_key,omitempty"`
+	AuthSalt       []byte                 `protobuf:"bytes,3,opt,name=auth_salt,json=authSalt,proto3" json:"auth_salt,omitempty"`
+	EncryptionSalt []byte                 `protobuf:"bytes,4,opt,name=encryption_salt,json=encryptionSalt,proto3" json:"encryption_salt,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
 func (x *RegisterRequest) Reset() {
 	*x = RegisterRequest{}
-	mi := &file_securawr_proto_msgTypes[0]
+	mi := &file_securawr_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -99,7 +190,7 @@ func (x *RegisterRequest) String() string {
 func (*RegisterRequest) ProtoMessage() {}
 
 func (x *RegisterRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_securawr_proto_msgTypes[0]
+	mi := &file_securawr_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -112,7 +203,7 @@ func (x *RegisterRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegisterRequest.ProtoReflect.Descriptor instead.
 func (*RegisterRequest) Descriptor() ([]byte, []int) {
-	return file_securawr_proto_rawDescGZIP(), []int{0}
+	return file_securawr_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *RegisterRequest) GetLogin() string {
@@ -122,23 +213,38 @@ func (x *RegisterRequest) GetLogin() string {
 	return ""
 }
 
-func (x *RegisterRequest) GetPassword() string {
+func (x *RegisterRequest) GetAuthKey() []byte {
 	if x != nil {
-		return x.Password
+		return x.AuthKey
 	}
-	return ""
+	return nil
+}
+
+func (x *RegisterRequest) GetAuthSalt() []byte {
+	if x != nil {
+		return x.AuthSalt
+	}
+	return nil
+}
+
+func (x *RegisterRequest) GetEncryptionSalt() []byte {
+	if x != nil {
+		return x.EncryptionSalt
+	}
+	return nil
 }
 
 type RegisterResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *RegisterResponse) Reset() {
 	*x = RegisterResponse{}
-	mi := &file_securawr_proto_msgTypes[1]
+	mi := &file_securawr_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -150,7 +256,7 @@ func (x *RegisterResponse) String() string {
 func (*RegisterResponse) ProtoMessage() {}
 
 func (x *RegisterResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_securawr_proto_msgTypes[1]
+	mi := &file_securawr_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -163,12 +269,19 @@ func (x *RegisterResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegisterResponse.ProtoReflect.Descriptor instead.
 func (*RegisterResponse) Descriptor() ([]byte, []int) {
-	return file_securawr_proto_rawDescGZIP(), []int{1}
+	return file_securawr_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *RegisterResponse) GetUserId() string {
+func (x *RegisterResponse) GetSuccess() bool {
 	if x != nil {
-		return x.UserId
+		return x.Success
+	}
+	return false
+}
+
+func (x *RegisterResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
 	}
 	return ""
 }
@@ -176,14 +289,14 @@ func (x *RegisterResponse) GetUserId() string {
 type LoginRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Login         string                 `protobuf:"bytes,1,opt,name=login,proto3" json:"login,omitempty"`
-	Password      string                 `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
+	AuthKey       []byte                 `protobuf:"bytes,2,opt,name=auth_key,json=authKey,proto3" json:"auth_key,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *LoginRequest) Reset() {
 	*x = LoginRequest{}
-	mi := &file_securawr_proto_msgTypes[2]
+	mi := &file_securawr_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -195,7 +308,7 @@ func (x *LoginRequest) String() string {
 func (*LoginRequest) ProtoMessage() {}
 
 func (x *LoginRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_securawr_proto_msgTypes[2]
+	mi := &file_securawr_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -208,7 +321,7 @@ func (x *LoginRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LoginRequest.ProtoReflect.Descriptor instead.
 func (*LoginRequest) Descriptor() ([]byte, []int) {
-	return file_securawr_proto_rawDescGZIP(), []int{2}
+	return file_securawr_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *LoginRequest) GetLogin() string {
@@ -218,23 +331,26 @@ func (x *LoginRequest) GetLogin() string {
 	return ""
 }
 
-func (x *LoginRequest) GetPassword() string {
+func (x *LoginRequest) GetAuthKey() []byte {
 	if x != nil {
-		return x.Password
+		return x.AuthKey
 	}
-	return ""
+	return nil
 }
 
 type LoginResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Token         string                 `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"` // JWT токен
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Token string                 `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"` // JWT токен
+	// EncryptionSalt возвращается клиенту после успешного входа, чтобы клиент
+	// мог вычислить Master_Key = Argon2id(password, encryption_salt)
+	EncryptionSalt []byte `protobuf:"bytes,2,opt,name=encryption_salt,json=encryptionSalt,proto3" json:"encryption_salt,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *LoginResponse) Reset() {
 	*x = LoginResponse{}
-	mi := &file_securawr_proto_msgTypes[3]
+	mi := &file_securawr_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -246,7 +362,7 @@ func (x *LoginResponse) String() string {
 func (*LoginResponse) ProtoMessage() {}
 
 func (x *LoginResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_securawr_proto_msgTypes[3]
+	mi := &file_securawr_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -259,7 +375,7 @@ func (x *LoginResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LoginResponse.ProtoReflect.Descriptor instead.
 func (*LoginResponse) Descriptor() ([]byte, []int) {
-	return file_securawr_proto_rawDescGZIP(), []int{3}
+	return file_securawr_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *LoginResponse) GetToken() string {
@@ -267,6 +383,13 @@ func (x *LoginResponse) GetToken() string {
 		return x.Token
 	}
 	return ""
+}
+
+func (x *LoginResponse) GetEncryptionSalt() []byte {
+	if x != nil {
+		return x.EncryptionSalt
+	}
+	return nil
 }
 
 type PingRequest struct {
@@ -278,7 +401,7 @@ type PingRequest struct {
 
 func (x *PingRequest) Reset() {
 	*x = PingRequest{}
-	mi := &file_securawr_proto_msgTypes[4]
+	mi := &file_securawr_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -290,7 +413,7 @@ func (x *PingRequest) String() string {
 func (*PingRequest) ProtoMessage() {}
 
 func (x *PingRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_securawr_proto_msgTypes[4]
+	mi := &file_securawr_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -303,7 +426,7 @@ func (x *PingRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PingRequest.ProtoReflect.Descriptor instead.
 func (*PingRequest) Descriptor() ([]byte, []int) {
-	return file_securawr_proto_rawDescGZIP(), []int{4}
+	return file_securawr_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *PingRequest) GetMessage() string {
@@ -323,7 +446,7 @@ type PingResponse struct {
 
 func (x *PingResponse) Reset() {
 	*x = PingResponse{}
-	mi := &file_securawr_proto_msgTypes[5]
+	mi := &file_securawr_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -335,7 +458,7 @@ func (x *PingResponse) String() string {
 func (*PingResponse) ProtoMessage() {}
 
 func (x *PingResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_securawr_proto_msgTypes[5]
+	mi := &file_securawr_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -348,7 +471,7 @@ func (x *PingResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PingResponse.ProtoReflect.Descriptor instead.
 func (*PingResponse) Descriptor() ([]byte, []int) {
-	return file_securawr_proto_rawDescGZIP(), []int{5}
+	return file_securawr_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *PingResponse) GetMessage() string {
@@ -365,179 +488,29 @@ func (x *PingResponse) GetVersion() string {
 	return ""
 }
 
-type DataMetadata struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Type          DataType               `protobuf:"varint,2,opt,name=type,proto3,enum=securawr.DataType" json:"type,omitempty"`
-	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`               // Имя файла или заголовок
-	Description   string                 `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"` // Опциональное описание пользователя
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *DataMetadata) Reset() {
-	*x = DataMetadata{}
-	mi := &file_securawr_proto_msgTypes[6]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *DataMetadata) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*DataMetadata) ProtoMessage() {}
-
-func (x *DataMetadata) ProtoReflect() protoreflect.Message {
-	mi := &file_securawr_proto_msgTypes[6]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use DataMetadata.ProtoReflect.Descriptor instead.
-func (*DataMetadata) Descriptor() ([]byte, []int) {
-	return file_securawr_proto_rawDescGZIP(), []int{6}
-}
-
-func (x *DataMetadata) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-func (x *DataMetadata) GetType() DataType {
-	if x != nil {
-		return x.Type
-	}
-	return DataType_DATA_TYPE_UNSPECIFIED
-}
-
-func (x *DataMetadata) GetName() string {
-	if x != nil {
-		return x.Name
-	}
-	return ""
-}
-
-func (x *DataMetadata) GetDescription() string {
-	if x != nil {
-		return x.Description
-	}
-	return ""
-}
-
-func (x *DataMetadata) GetCreatedAt() *timestamppb.Timestamp {
-	if x != nil {
-		return x.CreatedAt
-	}
-	return nil
-}
-
-func (x *DataMetadata) GetUpdatedAt() *timestamppb.Timestamp {
-	if x != nil {
-		return x.UpdatedAt
-	}
-	return nil
-}
-
-type SaveDataRequest struct {
+type AddDataRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Type          DataType               `protobuf:"varint,1,opt,name=type,proto3,enum=securawr.DataType" json:"type,omitempty"`
-	Data          []byte                 `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"` // Сам контент (Этап 2: plain/base64, Этап 3: шифрованный)
-	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
-	Description   string                 `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
+	EncryptedData []byte                 `protobuf:"bytes,2,opt,name=encrypted_data,json=encryptedData,proto3" json:"encrypted_data,omitempty"` // EncryptedObject (serialized json or protobuf)
+	MetaInfo      string                 `protobuf:"bytes,3,opt,name=meta_info,json=metaInfo,proto3" json:"meta_info,omitempty"`                // JSON с именем файла, размером и т.д.
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *SaveDataRequest) Reset() {
-	*x = SaveDataRequest{}
-	mi := &file_securawr_proto_msgTypes[7]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *SaveDataRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*SaveDataRequest) ProtoMessage() {}
-
-func (x *SaveDataRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_securawr_proto_msgTypes[7]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use SaveDataRequest.ProtoReflect.Descriptor instead.
-func (*SaveDataRequest) Descriptor() ([]byte, []int) {
-	return file_securawr_proto_rawDescGZIP(), []int{7}
-}
-
-func (x *SaveDataRequest) GetType() DataType {
-	if x != nil {
-		return x.Type
-	}
-	return DataType_DATA_TYPE_UNSPECIFIED
-}
-
-func (x *SaveDataRequest) GetData() []byte {
-	if x != nil {
-		return x.Data
-	}
-	return nil
-}
-
-func (x *SaveDataRequest) GetName() string {
-	if x != nil {
-		return x.Name
-	}
-	return ""
-}
-
-func (x *SaveDataRequest) GetDescription() string {
-	if x != nil {
-		return x.Description
-	}
-	return ""
-}
-
-type SaveDataResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *SaveDataResponse) Reset() {
-	*x = SaveDataResponse{}
+func (x *AddDataRequest) Reset() {
+	*x = AddDataRequest{}
 	mi := &file_securawr_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *SaveDataResponse) String() string {
+func (x *AddDataRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SaveDataResponse) ProtoMessage() {}
+func (*AddDataRequest) ProtoMessage() {}
 
-func (x *SaveDataResponse) ProtoReflect() protoreflect.Message {
+func (x *AddDataRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_securawr_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -549,12 +522,70 @@ func (x *SaveDataResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SaveDataResponse.ProtoReflect.Descriptor instead.
-func (*SaveDataResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use AddDataRequest.ProtoReflect.Descriptor instead.
+func (*AddDataRequest) Descriptor() ([]byte, []int) {
 	return file_securawr_proto_rawDescGZIP(), []int{8}
 }
 
-func (x *SaveDataResponse) GetId() string {
+func (x *AddDataRequest) GetType() DataType {
+	if x != nil {
+		return x.Type
+	}
+	return DataType_UNKNOWN
+}
+
+func (x *AddDataRequest) GetEncryptedData() []byte {
+	if x != nil {
+		return x.EncryptedData
+	}
+	return nil
+}
+
+func (x *AddDataRequest) GetMetaInfo() string {
+	if x != nil {
+		return x.MetaInfo
+	}
+	return ""
+}
+
+type AddDataResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"` // UUID созданной записи
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AddDataResponse) Reset() {
+	*x = AddDataResponse{}
+	mi := &file_securawr_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AddDataResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AddDataResponse) ProtoMessage() {}
+
+func (x *AddDataResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_securawr_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AddDataResponse.ProtoReflect.Descriptor instead.
+func (*AddDataResponse) Descriptor() ([]byte, []int) {
+	return file_securawr_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *AddDataResponse) GetId() string {
 	if x != nil {
 		return x.Id
 	}
@@ -571,7 +602,7 @@ type ListDataRequest struct {
 
 func (x *ListDataRequest) Reset() {
 	*x = ListDataRequest{}
-	mi := &file_securawr_proto_msgTypes[9]
+	mi := &file_securawr_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -583,7 +614,7 @@ func (x *ListDataRequest) String() string {
 func (*ListDataRequest) ProtoMessage() {}
 
 func (x *ListDataRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_securawr_proto_msgTypes[9]
+	mi := &file_securawr_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -596,26 +627,94 @@ func (x *ListDataRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListDataRequest.ProtoReflect.Descriptor instead.
 func (*ListDataRequest) Descriptor() ([]byte, []int) {
-	return file_securawr_proto_rawDescGZIP(), []int{9}
+	return file_securawr_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *ListDataRequest) GetTypeFilter() DataType {
 	if x != nil {
 		return x.TypeFilter
 	}
-	return DataType_DATA_TYPE_UNSPECIFIED
+	return DataType_UNKNOWN
+}
+
+type DataRecordInfo struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Type          DataType               `protobuf:"varint,2,opt,name=type,proto3,enum=securawr.DataType" json:"type,omitempty"`
+	MetaInfo      string                 `protobuf:"bytes,3,opt,name=meta_info,json=metaInfo,proto3" json:"meta_info,omitempty"`
+	CreatedAt     string                 `protobuf:"bytes,4,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"` // RFC3339 timestamp
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DataRecordInfo) Reset() {
+	*x = DataRecordInfo{}
+	mi := &file_securawr_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DataRecordInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DataRecordInfo) ProtoMessage() {}
+
+func (x *DataRecordInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_securawr_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DataRecordInfo.ProtoReflect.Descriptor instead.
+func (*DataRecordInfo) Descriptor() ([]byte, []int) {
+	return file_securawr_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *DataRecordInfo) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *DataRecordInfo) GetType() DataType {
+	if x != nil {
+		return x.Type
+	}
+	return DataType_UNKNOWN
+}
+
+func (x *DataRecordInfo) GetMetaInfo() string {
+	if x != nil {
+		return x.MetaInfo
+	}
+	return ""
+}
+
+func (x *DataRecordInfo) GetCreatedAt() string {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return ""
 }
 
 type ListDataResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Items         []*DataMetadata        `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
+	Items         []*DataRecordInfo      `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ListDataResponse) Reset() {
 	*x = ListDataResponse{}
-	mi := &file_securawr_proto_msgTypes[10]
+	mi := &file_securawr_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -627,7 +726,7 @@ func (x *ListDataResponse) String() string {
 func (*ListDataResponse) ProtoMessage() {}
 
 func (x *ListDataResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_securawr_proto_msgTypes[10]
+	mi := &file_securawr_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -640,10 +739,10 @@ func (x *ListDataResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListDataResponse.ProtoReflect.Descriptor instead.
 func (*ListDataResponse) Descriptor() ([]byte, []int) {
-	return file_securawr_proto_rawDescGZIP(), []int{10}
+	return file_securawr_proto_rawDescGZIP(), []int{12}
 }
 
-func (x *ListDataResponse) GetItems() []*DataMetadata {
+func (x *ListDataResponse) GetItems() []*DataRecordInfo {
 	if x != nil {
 		return x.Items
 	}
@@ -659,7 +758,7 @@ type GetDataRequest struct {
 
 func (x *GetDataRequest) Reset() {
 	*x = GetDataRequest{}
-	mi := &file_securawr_proto_msgTypes[11]
+	mi := &file_securawr_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -671,7 +770,7 @@ func (x *GetDataRequest) String() string {
 func (*GetDataRequest) ProtoMessage() {}
 
 func (x *GetDataRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_securawr_proto_msgTypes[11]
+	mi := &file_securawr_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -684,7 +783,7 @@ func (x *GetDataRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetDataRequest.ProtoReflect.Descriptor instead.
 func (*GetDataRequest) Descriptor() ([]byte, []int) {
-	return file_securawr_proto_rawDescGZIP(), []int{11}
+	return file_securawr_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *GetDataRequest) GetId() string {
@@ -698,18 +797,17 @@ type GetDataResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Type          DataType               `protobuf:"varint,2,opt,name=type,proto3,enum=securawr.DataType" json:"type,omitempty"`
-	Data          []byte                 `protobuf:"bytes,3,opt,name=data,proto3" json:"data,omitempty"`
-	Name          string                 `protobuf:"bytes,4,opt,name=name,proto3" json:"name,omitempty"`
-	Description   string                 `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty"`
-	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	EncryptedData []byte                 `protobuf:"bytes,3,opt,name=encrypted_data,json=encryptedData,proto3" json:"encrypted_data,omitempty"`
+	MetaInfo      string                 `protobuf:"bytes,4,opt,name=meta_info,json=metaInfo,proto3" json:"meta_info,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GetDataResponse) Reset() {
 	*x = GetDataResponse{}
-	mi := &file_securawr_proto_msgTypes[12]
+	mi := &file_securawr_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -721,7 +819,7 @@ func (x *GetDataResponse) String() string {
 func (*GetDataResponse) ProtoMessage() {}
 
 func (x *GetDataResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_securawr_proto_msgTypes[12]
+	mi := &file_securawr_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -734,7 +832,7 @@ func (x *GetDataResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetDataResponse.ProtoReflect.Descriptor instead.
 func (*GetDataResponse) Descriptor() ([]byte, []int) {
-	return file_securawr_proto_rawDescGZIP(), []int{12}
+	return file_securawr_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *GetDataResponse) GetId() string {
@@ -748,26 +846,19 @@ func (x *GetDataResponse) GetType() DataType {
 	if x != nil {
 		return x.Type
 	}
-	return DataType_DATA_TYPE_UNSPECIFIED
+	return DataType_UNKNOWN
 }
 
-func (x *GetDataResponse) GetData() []byte {
+func (x *GetDataResponse) GetEncryptedData() []byte {
 	if x != nil {
-		return x.Data
+		return x.EncryptedData
 	}
 	return nil
 }
 
-func (x *GetDataResponse) GetName() string {
+func (x *GetDataResponse) GetMetaInfo() string {
 	if x != nil {
-		return x.Name
-	}
-	return ""
-}
-
-func (x *GetDataResponse) GetDescription() string {
-	if x != nil {
-		return x.Description
+		return x.MetaInfo
 	}
 	return ""
 }
@@ -795,7 +886,7 @@ type DeleteDataRequest struct {
 
 func (x *DeleteDataRequest) Reset() {
 	*x = DeleteDataRequest{}
-	mi := &file_securawr_proto_msgTypes[13]
+	mi := &file_securawr_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -807,7 +898,7 @@ func (x *DeleteDataRequest) String() string {
 func (*DeleteDataRequest) ProtoMessage() {}
 
 func (x *DeleteDataRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_securawr_proto_msgTypes[13]
+	mi := &file_securawr_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -820,7 +911,7 @@ func (x *DeleteDataRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteDataRequest.ProtoReflect.Descriptor instead.
 func (*DeleteDataRequest) Descriptor() ([]byte, []int) {
-	return file_securawr_proto_rawDescGZIP(), []int{13}
+	return file_securawr_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *DeleteDataRequest) GetId() string {
@@ -839,7 +930,7 @@ type DeleteDataResponse struct {
 
 func (x *DeleteDataResponse) Reset() {
 	*x = DeleteDataResponse{}
-	mi := &file_securawr_proto_msgTypes[14]
+	mi := &file_securawr_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -851,7 +942,7 @@ func (x *DeleteDataResponse) String() string {
 func (*DeleteDataResponse) ProtoMessage() {}
 
 func (x *DeleteDataResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_securawr_proto_msgTypes[14]
+	mi := &file_securawr_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -864,7 +955,7 @@ func (x *DeleteDataResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteDataResponse.ProtoReflect.Descriptor instead.
 func (*DeleteDataResponse) Descriptor() ([]byte, []int) {
-	return file_securawr_proto_rawDescGZIP(), []int{14}
+	return file_securawr_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *DeleteDataResponse) GetSuccess() bool {
@@ -878,71 +969,76 @@ var File_securawr_proto protoreflect.FileDescriptor
 
 const file_securawr_proto_rawDesc = "" +
 	"\n" +
-	"\x0esecurawr.proto\x12\bsecurawr\x1a\x1fgoogle/protobuf/timestamp.proto\"C\n" +
+	"\x0esecurawr.proto\x12\bsecurawr\x1a\x1fgoogle/protobuf/timestamp.proto\")\n" +
+	"\x11AuthParamsRequest\x12\x14\n" +
+	"\x05login\x18\x01 \x01(\tR\x05login\"1\n" +
+	"\x12AuthParamsResponse\x12\x1b\n" +
+	"\tauth_salt\x18\x01 \x01(\fR\bauthSalt\"\x88\x01\n" +
 	"\x0fRegisterRequest\x12\x14\n" +
-	"\x05login\x18\x01 \x01(\tR\x05login\x12\x1a\n" +
-	"\bpassword\x18\x02 \x01(\tR\bpassword\"+\n" +
-	"\x10RegisterResponse\x12\x17\n" +
-	"\auser_id\x18\x01 \x01(\tR\x06userId\"@\n" +
+	"\x05login\x18\x01 \x01(\tR\x05login\x12\x19\n" +
+	"\bauth_key\x18\x02 \x01(\fR\aauthKey\x12\x1b\n" +
+	"\tauth_salt\x18\x03 \x01(\fR\bauthSalt\x12'\n" +
+	"\x0fencryption_salt\x18\x04 \x01(\fR\x0eencryptionSalt\"F\n" +
+	"\x10RegisterResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\"?\n" +
 	"\fLoginRequest\x12\x14\n" +
-	"\x05login\x18\x01 \x01(\tR\x05login\x12\x1a\n" +
-	"\bpassword\x18\x02 \x01(\tR\bpassword\"%\n" +
+	"\x05login\x18\x01 \x01(\tR\x05login\x12\x19\n" +
+	"\bauth_key\x18\x02 \x01(\fR\aauthKey\"N\n" +
 	"\rLoginResponse\x12\x14\n" +
-	"\x05token\x18\x01 \x01(\tR\x05token\"'\n" +
+	"\x05token\x18\x01 \x01(\tR\x05token\x12'\n" +
+	"\x0fencryption_salt\x18\x02 \x01(\fR\x0eencryptionSalt\"'\n" +
 	"\vPingRequest\x12\x18\n" +
 	"\amessage\x18\x01 \x01(\tR\amessage\"B\n" +
 	"\fPingResponse\x12\x18\n" +
 	"\amessage\x18\x01 \x01(\tR\amessage\x12\x18\n" +
-	"\aversion\x18\x02 \x01(\tR\aversion\"\xf2\x01\n" +
-	"\fDataMetadata\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12&\n" +
-	"\x04type\x18\x02 \x01(\x0e2\x12.securawr.DataTypeR\x04type\x12\x12\n" +
-	"\x04name\x18\x03 \x01(\tR\x04name\x12 \n" +
-	"\vdescription\x18\x04 \x01(\tR\vdescription\x129\n" +
-	"\n" +
-	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
-	"\n" +
-	"updated_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\x83\x01\n" +
-	"\x0fSaveDataRequest\x12&\n" +
-	"\x04type\x18\x01 \x01(\x0e2\x12.securawr.DataTypeR\x04type\x12\x12\n" +
-	"\x04data\x18\x02 \x01(\fR\x04data\x12\x12\n" +
-	"\x04name\x18\x03 \x01(\tR\x04name\x12 \n" +
-	"\vdescription\x18\x04 \x01(\tR\vdescription\"\"\n" +
-	"\x10SaveDataResponse\x12\x0e\n" +
+	"\aversion\x18\x02 \x01(\tR\aversion\"|\n" +
+	"\x0eAddDataRequest\x12&\n" +
+	"\x04type\x18\x01 \x01(\x0e2\x12.securawr.DataTypeR\x04type\x12%\n" +
+	"\x0eencrypted_data\x18\x02 \x01(\fR\rencryptedData\x12\x1b\n" +
+	"\tmeta_info\x18\x03 \x01(\tR\bmetaInfo\"!\n" +
+	"\x0fAddDataResponse\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"F\n" +
 	"\x0fListDataRequest\x123\n" +
 	"\vtype_filter\x18\x01 \x01(\x0e2\x12.securawr.DataTypeR\n" +
-	"typeFilter\"@\n" +
-	"\x10ListDataResponse\x12,\n" +
-	"\x05items\x18\x01 \x03(\v2\x16.securawr.DataMetadataR\x05items\" \n" +
+	"typeFilter\"\x84\x01\n" +
+	"\x0eDataRecordInfo\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12&\n" +
+	"\x04type\x18\x02 \x01(\x0e2\x12.securawr.DataTypeR\x04type\x12\x1b\n" +
+	"\tmeta_info\x18\x03 \x01(\tR\bmetaInfo\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\x04 \x01(\tR\tcreatedAt\"B\n" +
+	"\x10ListDataResponse\x12.\n" +
+	"\x05items\x18\x01 \x03(\v2\x18.securawr.DataRecordInfoR\x05items\" \n" +
 	"\x0eGetDataRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"\x89\x02\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\x83\x02\n" +
 	"\x0fGetDataResponse\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12&\n" +
-	"\x04type\x18\x02 \x01(\x0e2\x12.securawr.DataTypeR\x04type\x12\x12\n" +
-	"\x04data\x18\x03 \x01(\fR\x04data\x12\x12\n" +
-	"\x04name\x18\x04 \x01(\tR\x04name\x12 \n" +
-	"\vdescription\x18\x05 \x01(\tR\vdescription\x129\n" +
+	"\x04type\x18\x02 \x01(\x0e2\x12.securawr.DataTypeR\x04type\x12%\n" +
+	"\x0eencrypted_data\x18\x03 \x01(\fR\rencryptedData\x12\x1b\n" +
+	"\tmeta_info\x18\x04 \x01(\tR\bmetaInfo\x129\n" +
 	"\n" +
-	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"#\n" +
+	"updated_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"#\n" +
 	"\x11DeleteDataRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\".\n" +
 	"\x12DeleteDataResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess*~\n" +
-	"\bDataType\x12\x19\n" +
-	"\x15DATA_TYPE_UNSPECIFIED\x10\x00\x12\x12\n" +
-	"\x0eDATA_TYPE_TEXT\x10\x01\x12\x14\n" +
-	"\x10DATA_TYPE_BINARY\x10\x02\x12\x12\n" +
-	"\x0eDATA_TYPE_CARD\x10\x03\x12\x19\n" +
-	"\x15DATA_TYPE_CREDENTIALS\x10\x042\xc1\x01\n" +
-	"\vAuthService\x12A\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess*M\n" +
+	"\bDataType\x12\v\n" +
+	"\aUNKNOWN\x10\x00\x12\b\n" +
+	"\x04TEXT\x10\x01\x12\n" +
+	"\n" +
+	"\x06BINARY\x10\x02\x12\r\n" +
+	"\tBANK_CARD\x10\x03\x12\x0f\n" +
+	"\vCREDENTIALS\x10\x042\x8d\x02\n" +
+	"\vAuthService\x12J\n" +
+	"\rGetAuthParams\x12\x1b.securawr.AuthParamsRequest\x1a\x1c.securawr.AuthParamsResponse\x12A\n" +
 	"\bRegister\x12\x19.securawr.RegisterRequest\x1a\x1a.securawr.RegisterResponse\x128\n" +
 	"\x05Login\x12\x16.securawr.LoginRequest\x1a\x17.securawr.LoginResponse\x125\n" +
-	"\x04Ping\x12\x15.securawr.PingRequest\x1a\x16.securawr.PingResponse2\x9c\x02\n" +
-	"\vDataService\x12A\n" +
-	"\bSaveData\x12\x19.securawr.SaveDataRequest\x1a\x1a.securawr.SaveDataResponse\x12A\n" +
+	"\x04Ping\x12\x15.securawr.PingRequest\x1a\x16.securawr.PingResponse2\x99\x02\n" +
+	"\vDataService\x12>\n" +
+	"\aAddData\x12\x18.securawr.AddDataRequest\x1a\x19.securawr.AddDataResponse\x12A\n" +
 	"\bListData\x12\x19.securawr.ListDataRequest\x1a\x1a.securawr.ListDataResponse\x12>\n" +
 	"\aGetData\x12\x18.securawr.GetDataRequest\x1a\x19.securawr.GetDataResponse\x12G\n" +
 	"\n" +
@@ -961,55 +1057,57 @@ func file_securawr_proto_rawDescGZIP() []byte {
 }
 
 var file_securawr_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_securawr_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
+var file_securawr_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
 var file_securawr_proto_goTypes = []any{
 	(DataType)(0),                 // 0: securawr.DataType
-	(*RegisterRequest)(nil),       // 1: securawr.RegisterRequest
-	(*RegisterResponse)(nil),      // 2: securawr.RegisterResponse
-	(*LoginRequest)(nil),          // 3: securawr.LoginRequest
-	(*LoginResponse)(nil),         // 4: securawr.LoginResponse
-	(*PingRequest)(nil),           // 5: securawr.PingRequest
-	(*PingResponse)(nil),          // 6: securawr.PingResponse
-	(*DataMetadata)(nil),          // 7: securawr.DataMetadata
-	(*SaveDataRequest)(nil),       // 8: securawr.SaveDataRequest
-	(*SaveDataResponse)(nil),      // 9: securawr.SaveDataResponse
-	(*ListDataRequest)(nil),       // 10: securawr.ListDataRequest
-	(*ListDataResponse)(nil),      // 11: securawr.ListDataResponse
-	(*GetDataRequest)(nil),        // 12: securawr.GetDataRequest
-	(*GetDataResponse)(nil),       // 13: securawr.GetDataResponse
-	(*DeleteDataRequest)(nil),     // 14: securawr.DeleteDataRequest
-	(*DeleteDataResponse)(nil),    // 15: securawr.DeleteDataResponse
-	(*timestamppb.Timestamp)(nil), // 16: google.protobuf.Timestamp
+	(*AuthParamsRequest)(nil),     // 1: securawr.AuthParamsRequest
+	(*AuthParamsResponse)(nil),    // 2: securawr.AuthParamsResponse
+	(*RegisterRequest)(nil),       // 3: securawr.RegisterRequest
+	(*RegisterResponse)(nil),      // 4: securawr.RegisterResponse
+	(*LoginRequest)(nil),          // 5: securawr.LoginRequest
+	(*LoginResponse)(nil),         // 6: securawr.LoginResponse
+	(*PingRequest)(nil),           // 7: securawr.PingRequest
+	(*PingResponse)(nil),          // 8: securawr.PingResponse
+	(*AddDataRequest)(nil),        // 9: securawr.AddDataRequest
+	(*AddDataResponse)(nil),       // 10: securawr.AddDataResponse
+	(*ListDataRequest)(nil),       // 11: securawr.ListDataRequest
+	(*DataRecordInfo)(nil),        // 12: securawr.DataRecordInfo
+	(*ListDataResponse)(nil),      // 13: securawr.ListDataResponse
+	(*GetDataRequest)(nil),        // 14: securawr.GetDataRequest
+	(*GetDataResponse)(nil),       // 15: securawr.GetDataResponse
+	(*DeleteDataRequest)(nil),     // 16: securawr.DeleteDataRequest
+	(*DeleteDataResponse)(nil),    // 17: securawr.DeleteDataResponse
+	(*timestamppb.Timestamp)(nil), // 18: google.protobuf.Timestamp
 }
 var file_securawr_proto_depIdxs = []int32{
-	0,  // 0: securawr.DataMetadata.type:type_name -> securawr.DataType
-	16, // 1: securawr.DataMetadata.created_at:type_name -> google.protobuf.Timestamp
-	16, // 2: securawr.DataMetadata.updated_at:type_name -> google.protobuf.Timestamp
-	0,  // 3: securawr.SaveDataRequest.type:type_name -> securawr.DataType
-	0,  // 4: securawr.ListDataRequest.type_filter:type_name -> securawr.DataType
-	7,  // 5: securawr.ListDataResponse.items:type_name -> securawr.DataMetadata
-	0,  // 6: securawr.GetDataResponse.type:type_name -> securawr.DataType
-	16, // 7: securawr.GetDataResponse.created_at:type_name -> google.protobuf.Timestamp
-	16, // 8: securawr.GetDataResponse.updated_at:type_name -> google.protobuf.Timestamp
-	1,  // 9: securawr.AuthService.Register:input_type -> securawr.RegisterRequest
-	3,  // 10: securawr.AuthService.Login:input_type -> securawr.LoginRequest
-	5,  // 11: securawr.AuthService.Ping:input_type -> securawr.PingRequest
-	8,  // 12: securawr.DataService.SaveData:input_type -> securawr.SaveDataRequest
-	10, // 13: securawr.DataService.ListData:input_type -> securawr.ListDataRequest
-	12, // 14: securawr.DataService.GetData:input_type -> securawr.GetDataRequest
-	14, // 15: securawr.DataService.DeleteData:input_type -> securawr.DeleteDataRequest
-	2,  // 16: securawr.AuthService.Register:output_type -> securawr.RegisterResponse
-	4,  // 17: securawr.AuthService.Login:output_type -> securawr.LoginResponse
-	6,  // 18: securawr.AuthService.Ping:output_type -> securawr.PingResponse
-	9,  // 19: securawr.DataService.SaveData:output_type -> securawr.SaveDataResponse
-	11, // 20: securawr.DataService.ListData:output_type -> securawr.ListDataResponse
-	13, // 21: securawr.DataService.GetData:output_type -> securawr.GetDataResponse
-	15, // 22: securawr.DataService.DeleteData:output_type -> securawr.DeleteDataResponse
-	16, // [16:23] is the sub-list for method output_type
-	9,  // [9:16] is the sub-list for method input_type
-	9,  // [9:9] is the sub-list for extension type_name
-	9,  // [9:9] is the sub-list for extension extendee
-	0,  // [0:9] is the sub-list for field type_name
+	0,  // 0: securawr.AddDataRequest.type:type_name -> securawr.DataType
+	0,  // 1: securawr.ListDataRequest.type_filter:type_name -> securawr.DataType
+	0,  // 2: securawr.DataRecordInfo.type:type_name -> securawr.DataType
+	12, // 3: securawr.ListDataResponse.items:type_name -> securawr.DataRecordInfo
+	0,  // 4: securawr.GetDataResponse.type:type_name -> securawr.DataType
+	18, // 5: securawr.GetDataResponse.created_at:type_name -> google.protobuf.Timestamp
+	18, // 6: securawr.GetDataResponse.updated_at:type_name -> google.protobuf.Timestamp
+	1,  // 7: securawr.AuthService.GetAuthParams:input_type -> securawr.AuthParamsRequest
+	3,  // 8: securawr.AuthService.Register:input_type -> securawr.RegisterRequest
+	5,  // 9: securawr.AuthService.Login:input_type -> securawr.LoginRequest
+	7,  // 10: securawr.AuthService.Ping:input_type -> securawr.PingRequest
+	9,  // 11: securawr.DataService.AddData:input_type -> securawr.AddDataRequest
+	11, // 12: securawr.DataService.ListData:input_type -> securawr.ListDataRequest
+	14, // 13: securawr.DataService.GetData:input_type -> securawr.GetDataRequest
+	16, // 14: securawr.DataService.DeleteData:input_type -> securawr.DeleteDataRequest
+	2,  // 15: securawr.AuthService.GetAuthParams:output_type -> securawr.AuthParamsResponse
+	4,  // 16: securawr.AuthService.Register:output_type -> securawr.RegisterResponse
+	6,  // 17: securawr.AuthService.Login:output_type -> securawr.LoginResponse
+	8,  // 18: securawr.AuthService.Ping:output_type -> securawr.PingResponse
+	10, // 19: securawr.DataService.AddData:output_type -> securawr.AddDataResponse
+	13, // 20: securawr.DataService.ListData:output_type -> securawr.ListDataResponse
+	15, // 21: securawr.DataService.GetData:output_type -> securawr.GetDataResponse
+	17, // 22: securawr.DataService.DeleteData:output_type -> securawr.DeleteDataResponse
+	15, // [15:23] is the sub-list for method output_type
+	7,  // [7:15] is the sub-list for method input_type
+	7,  // [7:7] is the sub-list for extension type_name
+	7,  // [7:7] is the sub-list for extension extendee
+	0,  // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_securawr_proto_init() }
@@ -1023,7 +1121,7 @@ func file_securawr_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_securawr_proto_rawDesc), len(file_securawr_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   15,
+			NumMessages:   17,
 			NumExtensions: 0,
 			NumServices:   2,
 		},

@@ -19,9 +19,10 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	AuthService_Register_FullMethodName = "/securawr.AuthService/Register"
-	AuthService_Login_FullMethodName    = "/securawr.AuthService/Login"
-	AuthService_Ping_FullMethodName     = "/securawr.AuthService/Ping"
+	AuthService_GetAuthParams_FullMethodName = "/securawr.AuthService/GetAuthParams"
+	AuthService_Register_FullMethodName      = "/securawr.AuthService/Register"
+	AuthService_Login_FullMethodName         = "/securawr.AuthService/Login"
+	AuthService_Ping_FullMethodName          = "/securawr.AuthService/Ping"
 )
 
 // AuthServiceClient is the client API for AuthService service.
@@ -30,9 +31,14 @@ const (
 //
 // AuthService обрабатывает регистрацию и аутентификацию
 type AuthServiceClient interface {
-	// Register создаёт новый пользовательский аккаунт
+	// GetAuthParams возвращает параметры аутентификации (соль) для указанного
+	// логина. Используется клиентом перед Login, чтобы вычислить Auth_Key
+	GetAuthParams(ctx context.Context, in *AuthParamsRequest, opts ...grpc.CallOption) (*AuthParamsResponse, error)
+	// Register регистрирует нового пользователя, принимает не пароль, а
+	// вычисленный Auth_Key и сгенерированные клиентом соли
 	Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error)
-	// Login аутентифицирует пользователя и возвращает JWT-токен.
+	// Login выполняет вход пользователя, принимает Auth_Key, возвращает
+	// JWT-токен и соль шифрования
 	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
 	// Ping проверяет доступность сервиса
 	Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error)
@@ -44,6 +50,16 @@ type authServiceClient struct {
 
 func NewAuthServiceClient(cc grpc.ClientConnInterface) AuthServiceClient {
 	return &authServiceClient{cc}
+}
+
+func (c *authServiceClient) GetAuthParams(ctx context.Context, in *AuthParamsRequest, opts ...grpc.CallOption) (*AuthParamsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AuthParamsResponse)
+	err := c.cc.Invoke(ctx, AuthService_GetAuthParams_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *authServiceClient) Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error) {
@@ -82,9 +98,14 @@ func (c *authServiceClient) Ping(ctx context.Context, in *PingRequest, opts ...g
 //
 // AuthService обрабатывает регистрацию и аутентификацию
 type AuthServiceServer interface {
-	// Register создаёт новый пользовательский аккаунт
+	// GetAuthParams возвращает параметры аутентификации (соль) для указанного
+	// логина. Используется клиентом перед Login, чтобы вычислить Auth_Key
+	GetAuthParams(context.Context, *AuthParamsRequest) (*AuthParamsResponse, error)
+	// Register регистрирует нового пользователя, принимает не пароль, а
+	// вычисленный Auth_Key и сгенерированные клиентом соли
 	Register(context.Context, *RegisterRequest) (*RegisterResponse, error)
-	// Login аутентифицирует пользователя и возвращает JWT-токен.
+	// Login выполняет вход пользователя, принимает Auth_Key, возвращает
+	// JWT-токен и соль шифрования
 	Login(context.Context, *LoginRequest) (*LoginResponse, error)
 	// Ping проверяет доступность сервиса
 	Ping(context.Context, *PingRequest) (*PingResponse, error)
@@ -98,6 +119,9 @@ type AuthServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedAuthServiceServer struct{}
 
+func (UnimplementedAuthServiceServer) GetAuthParams(context.Context, *AuthParamsRequest) (*AuthParamsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetAuthParams not implemented")
+}
 func (UnimplementedAuthServiceServer) Register(context.Context, *RegisterRequest) (*RegisterResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Register not implemented")
 }
@@ -126,6 +150,24 @@ func RegisterAuthServiceServer(s grpc.ServiceRegistrar, srv AuthServiceServer) {
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&AuthService_ServiceDesc, srv)
+}
+
+func _AuthService_GetAuthParams_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AuthParamsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).GetAuthParams(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_GetAuthParams_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).GetAuthParams(ctx, req.(*AuthParamsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _AuthService_Register_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -190,6 +232,10 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*AuthServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
+			MethodName: "GetAuthParams",
+			Handler:    _AuthService_GetAuthParams_Handler,
+		},
+		{
 			MethodName: "Register",
 			Handler:    _AuthService_Register_Handler,
 		},
@@ -207,7 +253,7 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 }
 
 const (
-	DataService_SaveData_FullMethodName   = "/securawr.DataService/SaveData"
+	DataService_AddData_FullMethodName    = "/securawr.DataService/AddData"
 	DataService_ListData_FullMethodName   = "/securawr.DataService/ListData"
 	DataService_GetData_FullMethodName    = "/securawr.DataService/GetData"
 	DataService_DeleteData_FullMethodName = "/securawr.DataService/DeleteData"
@@ -219,8 +265,8 @@ const (
 //
 // DataService обрабатывает хранение из извлечение пользовательских данных
 type DataServiceClient interface {
-	// SaveData загружает на сервер новую запись о данных
-	SaveData(ctx context.Context, in *SaveDataRequest, opts ...grpc.CallOption) (*SaveDataResponse, error)
+	// AddData сохраняет зашифрованные данные
+	AddData(ctx context.Context, in *AddDataRequest, opts ...grpc.CallOption) (*AddDataResponse, error)
 	// ListData возвращает метаданные для всех хранящихся записей, принадлежащих
 	// пользователю
 	ListData(ctx context.Context, in *ListDataRequest, opts ...grpc.CallOption) (*ListDataResponse, error)
@@ -238,10 +284,10 @@ func NewDataServiceClient(cc grpc.ClientConnInterface) DataServiceClient {
 	return &dataServiceClient{cc}
 }
 
-func (c *dataServiceClient) SaveData(ctx context.Context, in *SaveDataRequest, opts ...grpc.CallOption) (*SaveDataResponse, error) {
+func (c *dataServiceClient) AddData(ctx context.Context, in *AddDataRequest, opts ...grpc.CallOption) (*AddDataResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SaveDataResponse)
-	err := c.cc.Invoke(ctx, DataService_SaveData_FullMethodName, in, out, cOpts...)
+	out := new(AddDataResponse)
+	err := c.cc.Invoke(ctx, DataService_AddData_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -284,8 +330,8 @@ func (c *dataServiceClient) DeleteData(ctx context.Context, in *DeleteDataReques
 //
 // DataService обрабатывает хранение из извлечение пользовательских данных
 type DataServiceServer interface {
-	// SaveData загружает на сервер новую запись о данных
-	SaveData(context.Context, *SaveDataRequest) (*SaveDataResponse, error)
+	// AddData сохраняет зашифрованные данные
+	AddData(context.Context, *AddDataRequest) (*AddDataResponse, error)
 	// ListData возвращает метаданные для всех хранящихся записей, принадлежащих
 	// пользователю
 	ListData(context.Context, *ListDataRequest) (*ListDataResponse, error)
@@ -303,8 +349,8 @@ type DataServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedDataServiceServer struct{}
 
-func (UnimplementedDataServiceServer) SaveData(context.Context, *SaveDataRequest) (*SaveDataResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method SaveData not implemented")
+func (UnimplementedDataServiceServer) AddData(context.Context, *AddDataRequest) (*AddDataResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AddData not implemented")
 }
 func (UnimplementedDataServiceServer) ListData(context.Context, *ListDataRequest) (*ListDataResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListData not implemented")
@@ -336,20 +382,20 @@ func RegisterDataServiceServer(s grpc.ServiceRegistrar, srv DataServiceServer) {
 	s.RegisterService(&DataService_ServiceDesc, srv)
 }
 
-func _DataService_SaveData_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SaveDataRequest)
+func _DataService_AddData_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddDataRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(DataServiceServer).SaveData(ctx, in)
+		return srv.(DataServiceServer).AddData(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: DataService_SaveData_FullMethodName,
+		FullMethod: DataService_AddData_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DataServiceServer).SaveData(ctx, req.(*SaveDataRequest))
+		return srv.(DataServiceServer).AddData(ctx, req.(*AddDataRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -416,8 +462,8 @@ var DataService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*DataServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "SaveData",
-			Handler:    _DataService_SaveData_Handler,
+			MethodName: "AddData",
+			Handler:    _DataService_AddData_Handler,
 		},
 		{
 			MethodName: "ListData",

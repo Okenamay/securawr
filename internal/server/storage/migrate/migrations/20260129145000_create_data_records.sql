@@ -46,9 +46,8 @@ CREATE INDEX IF NOT EXISTS idx_data_records_user_type ON data_records(user_id, d
 DROP INDEX IF EXISTS idx_data_records_user_type;
 DROP INDEX IF EXISTS idx_data_records_user_id;
 DROP TABLE IF EXISTS data_records;
--- +goose StatementEnd
 
--- Восстанавливаем старую схему users (как на Этапе 1) для корректного отката
+-- Восстанавливаем старую схему users для корректного отката
 DROP TABLE IF EXISTS users CASCADE;
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,

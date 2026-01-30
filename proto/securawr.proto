@@ -8,10 +8,16 @@ import "google/protobuf/timestamp.proto";
 
 // AuthService обрабатывает регистрацию и аутентификацию
 service AuthService {
-  // Register создаёт новый пользовательский аккаунт
+  // GetAuthParams возвращает параметры аутентификации (соль) для указанного
+  // логина. Используется клиентом перед Login, чтобы вычислить Auth_Key
+  rpc GetAuthParams(AuthParamsRequest) returns (AuthParamsResponse);  
+
+  // Register регистрирует нового пользователя, принимает не пароль, а
+  // вычисленный Auth_Key и сгенерированные клиентом соли
   rpc Register(RegisterRequest) returns (RegisterResponse);
 
-  // Login аутентифицирует пользователя и возвращает JWT-токен.
+  // Login выполняет вход пользователя, принимает Auth_Key, возвращает
+  // JWT-токен и соль шифрования
   rpc Login(LoginRequest) returns (LoginResponse);
 
   // Ping проверяет доступность сервиса
@@ -20,8 +26,8 @@ service AuthService {
 
 // DataService обрабатывает хранение из извлечение пользовательских данных
 service DataService {
-  // SaveData загружает на сервер новую запись о данных
-  rpc SaveData(SaveDataRequest) returns (SaveDataResponse);
+  // AddData сохраняет зашифрованные данные
+  rpc AddData(AddDataRequest) returns (AddDataResponse);
 
   // ListData возвращает метаданные для всех хранящихся записей, принадлежащих
   // пользователю
@@ -36,22 +42,37 @@ service DataService {
 
 // Авторизационные сообщения
 
+message AuthParamsRequest {
+  string login = 1;
+}
+
+message AuthParamsResponse {
+  // AuthSalt нужна клиенту для вычисления Auth_Key из введенного пароля
+  bytes auth_salt = 1;
+}
+
 message RegisterRequest {
   string login = 1;
-  string password = 2; // На Этапе 3: Это будет Auth_Key/обмен солью
+  bytes auth_key = 2;
+  bytes auth_salt = 3;
+  bytes encryption_salt = 4;
 }
 
 message RegisterResponse {
-  string user_id = 1;
+  bool success = 1;
+  string message = 2;
 }
 
 message LoginRequest {
   string login = 1;
-  string password = 2;
+  bytes auth_key = 2;
 }
 
 message LoginResponse {
   string token = 1; // JWT токен
+  // EncryptionSalt возвращается клиенту после успешного входа, чтобы клиент
+  // мог вычислить Master_Key = Argon2id(password, encryption_salt)
+  bytes encryption_salt = 2;
 }
 
 message PingRequest {
@@ -66,31 +87,21 @@ message PingResponse {
 // Сообщения данных
 
 enum DataType {
-  DATA_TYPE_UNSPECIFIED = 0;
-  DATA_TYPE_TEXT = 1;        // Произвольные текстовые данные
-  DATA_TYPE_BINARY = 2;      // Файлы, фото и т.п.
-  DATA_TYPE_CARD = 3;        // Информация о банковских картах
-  DATA_TYPE_CREDENTIALS = 4; // Пары логин/пароль
+  UNKNOWN = 0;
+  TEXT = 1;        // Произвольные текстовые данные
+  BINARY = 2;      // Файлы, фото и т.п.
+  BANK_CARD = 3;   // Информация о банковских картах
+  CREDENTIALS = 4; // Пары логин/пароль
 }
 
-message DataMetadata {
-  string id = 1;
-  DataType type = 2;
-  string name = 3;        // Имя файла или заголовок
-  string description = 4; // Опциональное описание пользователя
-  google.protobuf.Timestamp created_at = 5;
-  google.protobuf.Timestamp updated_at = 6;
-}
-
-message SaveDataRequest {
+message AddDataRequest {
   DataType type = 1;
-  bytes data = 2;         // Сам контент (Этап 2: plain/base64, Этап 3: шифрованный)
-  string name = 3;
-  string description = 4;
+  bytes encrypted_data = 2; // EncryptedObject (serialized json or protobuf)
+  string meta_info = 3;     // JSON с именем файла, размером и т.д.
 }
 
-message SaveDataResponse {
-  string id = 1;
+message AddDataResponse {
+  string id = 1; // UUID созданной записи
 }
 
 message ListDataRequest {
@@ -98,8 +109,15 @@ message ListDataRequest {
   DataType type_filter = 1; 
 }
 
+message DataRecordInfo {
+  string id = 1;
+  DataType type = 2;
+  string meta_info = 3;
+  string created_at = 4; // RFC3339 timestamp
+}
+
 message ListDataResponse {
-  repeated DataMetadata items = 1;
+  repeated DataRecordInfo items = 1;
 }
 
 message GetDataRequest {
@@ -109,11 +127,10 @@ message GetDataRequest {
 message GetDataResponse {
   string id = 1;
   DataType type = 2;
-  bytes data = 3;
-  string name = 4;
-  string description = 5;
-  google.protobuf.Timestamp created_at = 6;
-  google.protobuf.Timestamp updated_at = 7;
+  bytes encrypted_data = 3;
+  string meta_info = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
 }
 
 message DeleteDataRequest {
