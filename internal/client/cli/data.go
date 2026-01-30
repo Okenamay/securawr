@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -18,12 +19,18 @@ var (
 	description string
 )
 
+// Структура для формирования JSON метаданных
+type FileMeta struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
 // addCmd загружает файл на сервер
 var addCmd = &cobra.Command{
 	Use:   "add <file_path>",
 	Short: "Upload a file to secure storage",
 	Long:  `Read a file from local disk and upload it to the server securely.`,
-	Args:  cobra.ExactArgs(1), // Требуем ровно 1 аргумент (путь к файлу)
+	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		filePath := args[0]
 
@@ -57,14 +64,23 @@ var addCmd = &cobra.Command{
 		filename := filepath.Base(filePath)
 		fmt.Printf("Uploading '%s' (%d bytes)...\n", filename, len(data))
 
-		req := &pb.SaveDataRequest{
-			Type:        pb.DataType_DATA_TYPE_BINARY, // Пока по считаем всё бинарными данными
-			Data:        data,
+		// Формируем JSON метаданные
+		meta := FileMeta{
 			Name:        filename,
 			Description: description,
 		}
+		metaJSON, err := json.Marshal(meta)
+		if err != nil {
+			return fmt.Errorf("failed to encode metadata: %w", err)
+		}
 
-		resp, err := client.SaveData(ctx, req)
+		req := &pb.AddDataRequest{
+			Type:          pb.DataType_BINARY,
+			EncryptedData: data,
+			MetaInfo:      string(metaJSON),
+		}
+
+		resp, err := client.AddData(ctx, req)
 		if err != nil {
 			return fmt.Errorf("upload failed: %w", err)
 		}
@@ -99,7 +115,7 @@ var listCmd = &cobra.Command{
 		defer cancel()
 
 		req := &pb.ListDataRequest{
-			TypeFilter: pb.DataType_DATA_TYPE_UNSPECIFIED, // Запрашиваем всё
+			TypeFilter: pb.DataType_UNKNOWN, // Запрашиваем всё
 		}
 
 		resp, err := client.ListData(ctx, req)
@@ -116,13 +132,16 @@ var listCmd = &cobra.Command{
 		w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
 		fmt.Fprintln(w, "ID\tTYPE\tNAME\tCREATED AT\tDESCRIPTION")
 		for _, item := range resp.Items {
-			created := item.CreatedAt.AsTime().Format(time.RFC822)
+			// Разбираем метаданные для отображения имени
+			var meta FileMeta
+			_ = json.Unmarshal([]byte(item.MetaInfo), &meta)
+
 			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
 				item.Id,
 				item.Type.String(),
-				item.Name,
-				created,
-				item.Description,
+				meta.Name,
+				item.CreatedAt,
+				meta.Description,
 			)
 		}
 		w.Flush()
@@ -162,18 +181,22 @@ var getCmd = &cobra.Command{
 			return fmt.Errorf("download failed: %w", err)
 		}
 
-		// Используем имя из метаданных или ID, если имя пустое
-		filename := resp.Name
-		if filename == "" {
-			filename = resp.Id
+		var meta FileMeta
+		if err := json.Unmarshal([]byte(resp.MetaInfo), &meta); err != nil {
+			// Если метаданные битые, используем ID
+			meta.Name = resp.Id
+		}
+
+		if meta.Name == "" {
+			meta.Name = resp.Id
 		}
 
 		// Сохраняем файл в текущую директорию
-		if err := os.WriteFile(filename, resp.Data, 0644); err != nil {
+		if err := os.WriteFile(meta.Name, resp.EncryptedData, 0644); err != nil {
 			return fmt.Errorf("failed to save file to disk: %w", err)
 		}
 
-		fmt.Printf("Success! Saved as '%s' (%d bytes)\n", filename, len(resp.Data))
+		fmt.Printf("Success! Saved as '%s' (%d bytes)\n", meta.Name, len(resp.EncryptedData))
 		return nil
 	},
 }

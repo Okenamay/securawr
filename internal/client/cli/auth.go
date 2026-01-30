@@ -53,8 +53,10 @@ var registerCmd = &cobra.Command{
 		defer cancel()
 
 		req := &pb.RegisterRequest{
-			Login:    login,
-			Password: password,
+			Login:          login,
+			AuthKey:        []byte(password),
+			AuthSalt:       []byte{}, // Пока пусто
+			EncryptionSalt: []byte{}, // Пока пусто
 		}
 
 		resp, err := client.Register(ctx, req)
@@ -62,8 +64,12 @@ var registerCmd = &cobra.Command{
 			return fmt.Errorf("registration failed: %w", err)
 		}
 
-		fmt.Println("Success!")
-		fmt.Printf("User registered with ID: %s\n", resp.UserId)
+		if resp.Success {
+			fmt.Println("Success!")
+			fmt.Println(resp.Message)
+		} else {
+			fmt.Println("Registration failed: " + resp.Message)
+		}
 		return nil
 	},
 }
@@ -96,8 +102,8 @@ var loginCmd = &cobra.Command{
 		defer cancel()
 
 		req := &pb.LoginRequest{
-			Login:    login,
-			Password: password,
+			Login:   login,
+			AuthKey: []byte(password),
 		}
 
 		resp, err := client.Login(ctx, req)
