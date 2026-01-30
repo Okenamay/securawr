@@ -2,11 +2,13 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	pb "github.com/Okenamay/securawr/gen/proto"
 	"github.com/Okenamay/securawr/internal/server/auth"
@@ -157,18 +159,149 @@ func (h *Handler) Login(ctx context.Context, req *pb.LoginRequest) (*pb.LoginRes
 
 // Реализация DataService
 
+// SaveData сохраняет данные пользователя
 func (h *Handler) SaveData(ctx context.Context, req *pb.SaveDataRequest) (*pb.SaveDataResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SaveData not implemented")
+	// 1. Авторизация: Получаем UserID из контекста
+	userIDStr, err := auth.UserIDFromContext(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, "authentication required")
+	}
+	userID, _ := uuid.Parse(userIDStr)
+
+	// 2. Валидация
+	if len(req.Data) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "data cannot be empty")
+	}
+
+	// 3. Подготовка метаданных
+	meta := storage.DataMeta{
+		Name:        req.Name,
+		Description: req.Description,
+		Filename:    req.Name, // Для простоты дублируем имя в filename
+	}
+	metaJSON, err := json.Marshal(meta)
+	if err != nil {
+		h.log.Error("Failed to marshal metadata", zap.Error(err))
+		return nil, status.Error(codes.Internal, "failed to process metadata")
+	}
+
+	// 4. Сохранение
+	newID := uuid.New()
+	record := storage.DataRecord{
+		ID:       newID,
+		UserID:   userID,
+		DataType: int(req.Type),
+		DataBlob: req.Data,
+		MetaInfo: string(metaJSON),
+	}
+
+	if err := h.storage.CreateDataRecord(ctx, record); err != nil {
+		return nil, status.Error(codes.Internal, "failed to save data")
+	}
+
+	h.log.Info("Data saved successfully", zap.String("id", newID.String()), zap.String("user_id", userIDStr))
+
+	return &pb.SaveDataResponse{
+		Id: newID.String(),
+	}, nil
 }
 
+// ListData возвращает список файлов пользователя
 func (h *Handler) ListData(ctx context.Context, req *pb.ListDataRequest) (*pb.ListDataResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ListData not implemented")
+	userIDStr, err := auth.UserIDFromContext(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, "authentication required")
+	}
+	userID, _ := uuid.Parse(userIDStr)
+
+	records, err := h.storage.ListDataRecords(ctx, userID)
+	if err != nil {
+		h.log.Error("Failed to list data", zap.Error(err))
+		return nil, status.Error(codes.Internal, "failed to fetch data list")
+	}
+
+	var responseItems []*pb.DataMetadata
+	for _, r := range records {
+		// Фильтр по типу (если задан)
+		if req.TypeFilter != pb.DataType_DATA_TYPE_UNSPECIFIED && int(req.TypeFilter) != r.DataType {
+			continue
+		}
+
+		// Десериализация метаданных
+		var meta storage.DataMeta
+		_ = json.Unmarshal([]byte(r.MetaInfo), &meta) // Игнорируем ошибку, чтобы не ломать весь список из-за одного битого JSON
+
+		responseItems = append(responseItems, &pb.DataMetadata{
+			Id:          r.ID.String(),
+			Type:        pb.DataType(r.DataType),
+			Name:        meta.Name,
+			Description: meta.Description,
+			CreatedAt:   timestamppb.New(r.CreatedAt),
+			UpdatedAt:   timestamppb.New(r.UpdatedAt),
+		})
+	}
+
+	return &pb.ListDataResponse{
+		Items: responseItems,
+	}, nil
 }
 
+// GetData возвращает содержимое файла
 func (h *Handler) GetData(ctx context.Context, req *pb.GetDataRequest) (*pb.GetDataResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetData not implemented")
+	userIDStr, err := auth.UserIDFromContext(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, "authentication required")
+	}
+	userID, _ := uuid.Parse(userIDStr)
+	dataID, err := uuid.Parse(req.Id)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid data ID")
+	}
+
+	record, err := h.storage.GetDataRecord(ctx, dataID, userID)
+	if err != nil {
+		if errors.Is(err, storage.ErrDataNotFound) {
+			return nil, status.Error(codes.NotFound, "data not found")
+		}
+		return nil, status.Error(codes.Internal, "failed to fetch data")
+	}
+
+	var meta storage.DataMeta
+	_ = json.Unmarshal([]byte(record.MetaInfo), &meta)
+
+	return &pb.GetDataResponse{
+		Id:          record.ID.String(),
+		Type:        pb.DataType(record.DataType),
+		Data:        record.DataBlob,
+		Name:        meta.Name,
+		Description: meta.Description,
+		CreatedAt:   timestamppb.New(record.CreatedAt),
+		UpdatedAt:   timestamppb.New(record.UpdatedAt),
+	}, nil
 }
 
+// DeleteData удаляет файл
 func (h *Handler) DeleteData(ctx context.Context, req *pb.DeleteDataRequest) (*pb.DeleteDataResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DeleteData not implemented")
+	userIDStr, err := auth.UserIDFromContext(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, "authentication required")
+	}
+	userID, _ := uuid.Parse(userIDStr)
+	dataID, err := uuid.Parse(req.Id)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid data ID")
+	}
+
+	if err := h.storage.DeleteDataRecord(ctx, dataID, userID); err != nil {
+		if errors.Is(err, storage.ErrDataNotFound) {
+			return nil, status.Error(codes.NotFound, "data not found")
+		}
+		return nil, status.Error(codes.Internal, "failed to delete data")
+	}
+
+	h.log.Info("Data deleted", zap.String("id", req.Id), zap.String("user_id", userIDStr))
+
+	return &pb.DeleteDataResponse{
+		Success: true,
+	}, nil
 }

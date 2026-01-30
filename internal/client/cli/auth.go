@@ -16,6 +16,14 @@ var (
 	password string
 )
 
+// Вспомогательная функция для получения токена из конфига
+func getToken() string {
+	if ConfigManager != nil {
+		return ConfigManager.GetToken()
+	}
+	return ""
+}
+
 // registerCmd представляет команду регистрации нового пользователя
 var registerCmd = &cobra.Command{
 	Use:   "register",
@@ -31,8 +39,8 @@ var registerCmd = &cobra.Command{
 		serverAddr := ConfigManager.GetServerAddress()
 		fmt.Printf("Connecting to server at %s...\n", serverAddr)
 
-		// 3. Создаем соединение
-		conn, err := grpcclient.NewClient(serverAddr)
+		// 3. Создаём соединение, передаем провайдер токена
+		conn, err := grpcclient.NewClient(serverAddr, getToken)
 		if err != nil {
 			return fmt.Errorf("failed to connect to server: %w", err)
 		}
@@ -46,12 +54,11 @@ var registerCmd = &cobra.Command{
 
 		req := &pb.RegisterRequest{
 			Login:    login,
-			Password: password, // На этом этапе отправляем как есть (см. ТЗ Этап 2)
+			Password: password,
 		}
 
 		resp, err := client.Register(ctx, req)
 		if err != nil {
-			// gRPC возвращает ошибку, которую можно вывести пользователю
 			return fmt.Errorf("registration failed: %w", err)
 		}
 
@@ -76,7 +83,7 @@ var loginCmd = &cobra.Command{
 		serverAddr := ConfigManager.GetServerAddress()
 		fmt.Printf("Connecting to server at %s...\n", serverAddr)
 
-		conn, err := grpcclient.NewClient(serverAddr)
+		conn, err := grpcclient.NewClient(serverAddr, getToken)
 		if err != nil {
 			return fmt.Errorf("failed to connect to server: %w", err)
 		}
@@ -90,7 +97,7 @@ var loginCmd = &cobra.Command{
 
 		req := &pb.LoginRequest{
 			Login:    login,
-			Password: password, // На этом этапе отправляем как есть
+			Password: password,
 		}
 
 		resp, err := client.Login(ctx, req)
