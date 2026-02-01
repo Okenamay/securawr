@@ -19,7 +19,7 @@ type Client struct {
 
 // New создает нового клиента
 // Если certFile пустой, используется insecure соединение (только для тестов)
-func New(addr string, certFile string) (*Client, error) {
+func NewClient(addr string, certFile string) (*Client, error) {
 	var opts []grpc.DialOption
 
 	if certFile != "" {

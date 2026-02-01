@@ -18,8 +18,10 @@ const (
 
 // Config описывает структуру конфигурационного файла
 type Config struct {
-	ServerAddress string `json:"server_address"`
-	AuthToken     string `json:"auth_token,omitempty"`
+	ServerAddress  string `json:"server_address"`
+	AuthToken      string `json:"auth_token,omitempty"`
+	EncryptionSalt string `json:"encryption_salt,omitempty"`
+	CertFile       string `json:"cert_file,omitempty"`
 }
 
 // Manager управляет загрузкой и сохранением конфигурации
@@ -38,7 +40,8 @@ func New() (*Manager, error) {
 	}
 
 	configDir := filepath.Join(home, dirName)
-	// Создаем директорию конфига, если её нет (права 700 - только для владельца)
+	// Создаем директорию конфига, если её нет (права 700 - только для
+	// владельца)
 	if err := os.MkdirAll(configDir, 0700); err != nil {
 		return nil, fmt.Errorf("failed to create config dir: %w", err)
 	}
@@ -122,4 +125,26 @@ func (m *Manager) SetToken(token string) error {
 	m.cfg.AuthToken = token
 	m.mu.Unlock()
 	return m.Save()
+}
+
+// GetEncryptionSalt возвращает соль шифрования
+func (m *Manager) GetEncryptionSalt() string {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.cfg.EncryptionSalt
+}
+
+// SetEncryptionSalt обновляет соль шифрования и сохраняет конфиг
+func (m *Manager) SetEncryptionSalt(salt string) error {
+	m.mu.Lock()
+	m.cfg.EncryptionSalt = salt
+	m.mu.Unlock()
+	return m.Save()
+}
+
+// GetCertFile возвращает путь к сертификату
+func (m *Manager) GetCertFile() string {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.cfg.CertFile
 }

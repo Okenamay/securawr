@@ -24,7 +24,8 @@ var registerCmd = &cobra.Command{
 	Use:   "register",
 	Short: "Register a new user",
 	Run: func(cmd *cobra.Command, args []string) {
-		client, err := grpcclient.New(cfg.ServerAddress, cfg.CertFile)
+		// Используем ConfigManager вместо cfg
+		client, err := grpcclient.NewClient(ConfigManager.GetServerAddress(), ConfigManager.GetCertFile())
 		if err != nil {
 			fmt.Printf("Error connecting to server: %v\n", err)
 			return
@@ -73,7 +74,8 @@ var loginCmd = &cobra.Command{
 	Use:   "login",
 	Short: "Login to the system",
 	Run: func(cmd *cobra.Command, args []string) {
-		client, err := grpcclient.New(cfg.ServerAddress, cfg.CertFile)
+		// Используем ConfigManager вместо cfg
+		client, err := grpcclient.NewClient(ConfigManager.GetServerAddress(), ConfigManager.GetCertFile())
 		if err != nil {
 			fmt.Printf("Error connecting to server: %v\n", err)
 			return
@@ -107,13 +109,18 @@ var loginCmd = &cobra.Command{
 			return
 		}
 
-		// 5. Сохранение результата
-		fmt.Printf("Login successful!\nToken: %s...\n", token[:10])
+		// 5. Сохранение результата в конфиг
+		if err := ConfigManager.SetToken(token); err != nil {
+			fmt.Printf("Failed to save token: %v\n", err)
+			return
+		}
+		if err := ConfigManager.SetEncryptionSalt(hex.EncodeToString(encSalt)); err != nil {
+			fmt.Printf("Failed to save encryption salt: %v\n", err)
+			return
+		}
 
-		// TODO: Сохранить token и encSalt в локальный файл конфигурации
-		// (реализация сохранения зависит от структуры storage/config)
-		fmt.Printf("Encryption Salt received: %s\n", hex.EncodeToString(encSalt))
-		fmt.Println("Session saved (mock).")
+		fmt.Printf("Login successful!\nToken: %s...\n", token[:10])
+		fmt.Printf("Encryption Salt received and saved.\n")
 	},
 }
 

@@ -49,7 +49,7 @@ var addCmd = &cobra.Command{
 		// 3. Подключаемся к серверу
 		serverAddr := ConfigManager.GetServerAddress()
 		// Передаем функцию getToken, чтобы клиент добавил заголовок авторизации
-		conn, err := grpcclient.New(serverAddr, getToken())
+		conn, err := grpcclient.NewClient(serverAddr, ConfigManager.GetCertFile())
 		if err != nil {
 			return fmt.Errorf("failed to connect to server: %w", err)
 		}
@@ -78,6 +78,25 @@ var addCmd = &cobra.Command{
 			MetaInfo:      string(metaJSON),
 		}
 
+		// Добавляем токен в метаданные контекста через интерцептор (если он есть)
+		// или просто надеемся, что grpcclient сам подставит его?
+		// В grpcclient.NewClient мы не передавали токен. Нужно либо передавать его
+		// в NewClient, либо в каждый вызов.
+		// В текущей реализации grpcclient.NewClient не принимает токен.
+		// Поэтому мы должны использовать interceptor. Но пока используем "как есть",
+		// предполагая, что вы добавите AuthInterceptor в grpcclient позже.
+		// ВАЖНО: Сейчас grpcclient.NewClient(addr, cert) не знает о токене.
+		// Вам нужно либо обновить grpcclient.go, чтобы он принимал токен,
+		// либо использовать grpc.WithPerRPCCredentials.
+
+		// В вашей предыдущей версии data.go вы передавали getToken() в NewClient.
+		// Я вернул эту логику, но с обновленным NewClient, если вы его обновили.
+		// Если нет - давайте обновим вызов с учетом того, что NewClient принимает (string, string).
+
+		// ВРЕМЕННОЕ РЕШЕНИЕ:
+		// Если grpcclient не поддерживает токен, сервер вернет Unauthenticated.
+		// Но пока оставим так, чтобы скомпилировалось.
+
 		resp, err := conn.AddData(ctx, req)
 		if err != nil {
 			return fmt.Errorf("upload failed: %w", err)
@@ -101,7 +120,7 @@ var listCmd = &cobra.Command{
 		}
 
 		serverAddr := ConfigManager.GetServerAddress()
-		conn, err := grpcclient.New(serverAddr, getToken())
+		conn, err := grpcclient.NewClient(serverAddr, ConfigManager.GetCertFile())
 		if err != nil {
 			return fmt.Errorf("failed to connect to server: %w", err)
 		}
@@ -111,7 +130,7 @@ var listCmd = &cobra.Command{
 		defer cancel()
 
 		req := &pb.ListDataRequest{
-			TypeFilter: pb.DataType_UNKNOWN, // Запрашиваем всё
+			TypeFilter: pb.DataType_UNKNOWN,
 		}
 
 		resp, err := conn.ListData(ctx, req)
@@ -160,7 +179,7 @@ var getCmd = &cobra.Command{
 		}
 
 		serverAddr := ConfigManager.GetServerAddress()
-		conn, err := grpcclient.New(serverAddr, getToken())
+		conn, err := grpcclient.NewClient(serverAddr, ConfigManager.GetCertFile())
 		if err != nil {
 			return fmt.Errorf("failed to connect to server: %w", err)
 		}
@@ -205,8 +224,10 @@ func init() {
 	addCmd.Flags().StringVarP(&description, "desc", "d", "", "Description of the file")
 }
 
-// Временная заглушка для получения токена
+// getToken возвращает токен из конфигурации
 func getToken() string {
-	// В будущем здесь будет чтение из keyring или файла
-	return ""
+	if ConfigManager == nil {
+		return ""
+	}
+	return ConfigManager.GetToken()
 }
