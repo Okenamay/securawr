@@ -116,3 +116,19 @@ func (s *Storage) DeleteDataRecord(ctx context.Context, id, userID uuid.UUID) er
 	}
 	return nil
 }
+
+// GetUserUsage возвращает суммарный объем данных пользователя в байтах
+func (s *Storage) GetUserUsage(ctx context.Context, userID uuid.UUID) (int64, error) {
+	// Считаем сумму длин зашифрованных данных и ключей
+	query := `
+		SELECT COALESCE(SUM(octet_length(encrypted_data) + octet_length(encrypted_key)), 0)
+		FROM data_records
+		WHERE user_id = $1
+	`
+	var usage int64
+	err := s.Pool.QueryRow(ctx, query, userID).Scan(&usage)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get user usage: %w", err)
+	}
+	return usage, nil
+}

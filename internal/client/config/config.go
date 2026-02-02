@@ -14,6 +14,10 @@ const (
 
 	// DefaultServerAddress - адрес сервера по умолчанию
 	DefaultServerAddress = "localhost:3200"
+	// DefaultMaxFileSize - максимальный размер файла (50 МБ)
+	DefaultMaxFileSize = 50 * 1024 * 1024
+	// DefaultLocalCacheSize - максимальный размер кеша (100 МБ)
+	DefaultLocalCacheSize = 100 * 1024 * 1024
 )
 
 // Config описывает структуру конфигурационного файла
@@ -22,6 +26,8 @@ type Config struct {
 	AuthToken      string `json:"auth_token,omitempty"`
 	EncryptionSalt string `json:"encryption_salt,omitempty"`
 	CertFile       string `json:"cert_file,omitempty"`
+	MaxFileSize    int64  `json:"max_file_size,omitempty"`
+	LocalCacheSize int64  `json:"local_cache_size,omitempty"`
 }
 
 // Manager управляет загрузкой и сохранением конфигурации
@@ -49,7 +55,9 @@ func New() (*Manager, error) {
 	return &Manager{
 		filePath: filepath.Join(configDir, configFileName),
 		cfg: &Config{
-			ServerAddress: DefaultServerAddress,
+			ServerAddress:  DefaultServerAddress,
+			MaxFileSize:    DefaultMaxFileSize,
+			LocalCacheSize: DefaultLocalCacheSize,
 		},
 	}, nil
 }
@@ -72,6 +80,14 @@ func (m *Manager) Load() (*Config, error) {
 
 	if err := json.NewDecoder(file).Decode(m.cfg); err != nil {
 		return nil, fmt.Errorf("failed to decode config: %w", err)
+	}
+
+	// На всякий случай восстановим дефолты, если в файле конфига были нули:
+	if m.cfg.MaxFileSize == 0 {
+		m.cfg.MaxFileSize = DefaultMaxFileSize
+	}
+	if m.cfg.LocalCacheSize == 0 {
+		m.cfg.LocalCacheSize = DefaultLocalCacheSize
 	}
 
 	return m.cfg, nil
@@ -147,4 +163,24 @@ func (m *Manager) GetCertFile() string {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return m.cfg.CertFile
+}
+
+// GetMaxFileSize возвращает максимальный размер файла
+func (m *Manager) GetMaxFileSize() int64 {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	if m.cfg.MaxFileSize == 0 {
+		return DefaultMaxFileSize
+	}
+	return m.cfg.MaxFileSize
+}
+
+// GetLocalCacheSize возвращает лимит локального кеша
+func (m *Manager) GetLocalCacheSize() int64 {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	if m.cfg.LocalCacheSize == 0 {
+		return DefaultLocalCacheSize
+	}
+	return m.cfg.LocalCacheSize
 }

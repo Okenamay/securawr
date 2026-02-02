@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"flag"
 	"os"
+	"strconv"
 	"sync"
 )
 
@@ -14,6 +15,8 @@ const (
 	defaultLogLevel     = "info"
 	defaultServerPepper = "Cayenne&blacK"
 	defaultJWTSecret    = "3hvost@kotyaki:Qu#Oli#Ma@2025!"
+	defaultUserQuota    = 250 * 1024 * 1024
+	defaultMaxFileSize  = 50 * 1024 * 1024
 )
 
 // Config хранит конфигурацию сервера
@@ -24,6 +27,8 @@ type Config struct {
 	ConfigPath   string
 	ServerPepper string // Секретная строка сервера для хеширования (Server_Pepper)
 	JWTSecret    string // Секрет для подписи токенов
+	UserQuota    int64  // Максимальный объём хранилища для одного пользователя (в байтах)
+	MaxFileSize  int64  // Максимальный размер одного файла (в байтах)
 }
 
 // fileConfig описывает структуру JSON-файла конфигурации
@@ -33,6 +38,8 @@ type fileConfig struct {
 	LogLevel     *string `json:"log_level"`
 	ServerPepper *string `json:"server_pepper"`
 	JWTSecret    *string `json:"jwt_secret"`
+	UserQuota    *int64  `json:"user_quota"`
+	MaxFileSize  *int64  `json:"max_file_size"`
 }
 
 var (
@@ -58,9 +65,10 @@ func parseFlags() (*Config, error) {
 	config.GRPCPort = defaultGRPCPort
 	config.DSN = defaultDSN
 	config.LogLevel = defaultLogLevel
-
 	config.ServerPepper = defaultServerPepper
 	config.JWTSecret = defaultJWTSecret
+	config.UserQuota = defaultUserQuota
+	config.MaxFileSize = defaultMaxFileSize
 
 	// 2. Определяем флаги
 	flag.StringVar(&config.GRPCPort, "port", config.GRPCPort, "Порт сервера gRPC")
@@ -68,6 +76,8 @@ func parseFlags() (*Config, error) {
 	flag.StringVar(&config.LogLevel, "log-level", config.LogLevel, "Уровень лог-файла (debug, info, error)")
 	flag.StringVar(&config.ServerPepper, "pepper", config.ServerPepper, "Перец сервера для повышения защищённости данных")
 	flag.StringVar(&config.JWTSecret, "jwt-secret", config.JWTSecret, "Секрет для JWT-токена")
+	flag.Int64Var(&config.UserQuota, "user-quota", config.UserQuota, "Квота пользователя на сервере (в байтах)")
+	flag.Int64Var(&config.MaxFileSize, "max-file-size", config.MaxFileSize, "Максимальный размер файла (в байтах)")
 
 	// Флаги работы через файл конфигурации
 	flag.StringVar(&config.ConfigPath, "config", "", "Путь к файлу конфигурации")
@@ -144,6 +154,28 @@ func parseFlags() (*Config, error) {
 			config.JWTSecret = envVal
 		} else if fCfg != nil && fCfg.JWTSecret != nil {
 			config.JWTSecret = *fCfg.JWTSecret
+		}
+	}
+
+	// UserQuota
+	if !setFlags["user-quota"] {
+		if envVal, ok := os.LookupEnv("USER_QUOTA"); ok {
+			if v, err := strconv.ParseInt(envVal, 10, 64); err == nil {
+				config.UserQuota = v
+			}
+		} else if fCfg != nil && fCfg.UserQuota != nil {
+			config.UserQuota = *fCfg.UserQuota
+		}
+	}
+
+	// MaxFileSize
+	if !setFlags["max-file-size"] {
+		if envVal, ok := os.LookupEnv("MAX_FILE_SIZE"); ok {
+			if v, err := strconv.ParseInt(envVal, 10, 64); err == nil {
+				config.MaxFileSize = v
+			}
+		} else if fCfg != nil && fCfg.MaxFileSize != nil {
+			config.MaxFileSize = *fCfg.MaxFileSize
 		}
 	}
 
