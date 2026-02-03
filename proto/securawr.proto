@@ -1,0 +1,147 @@
+syntax = "proto3";
+
+package securawr;
+
+option go_package = "github.com/Okenamay/securawr/gen/proto";
+
+import "google/protobuf/timestamp.proto";
+
+// AuthService обрабатывает регистрацию и аутентификацию
+service AuthService {
+  // GetAuthParams возвращает параметры аутентификации (соль) для указанного
+  // логина. Используется клиентом перед Login, чтобы вычислить Auth_Key
+  rpc GetAuthParams(AuthParamsRequest) returns (AuthParamsResponse);  
+
+  // Register регистрирует нового пользователя, принимает не пароль, а
+  // вычисленный Auth_Key и сгенерированные клиентом соли
+  rpc Register(RegisterRequest) returns (RegisterResponse);
+
+  // Login выполняет вход пользователя, принимает Auth_Key, возвращает
+  // JWT-токен и соль шифрования
+  rpc Login(LoginRequest) returns (LoginResponse);
+
+  // Ping проверяет доступность сервиса
+  rpc Ping(PingRequest) returns (PingResponse);
+}
+
+// DataService обрабатывает хранение из извлечение пользовательских данных
+service DataService {
+  // AddData сохраняет зашифрованные данные
+  rpc AddData(AddDataRequest) returns (AddDataResponse);
+
+  // ListData возвращает метаданные для всех хранящихся записей, принадлежащих
+  // пользователю
+  rpc ListData(ListDataRequest) returns (ListDataResponse);
+
+  // GetData возвращает полное содержимое конкретной записи
+  rpc GetData(GetDataRequest) returns (GetDataResponse);
+
+  // DeleteData удаляет запись по ID
+  rpc DeleteData(DeleteDataRequest) returns (DeleteDataResponse);
+}
+
+// Авторизационные сообщения
+
+message AuthParamsRequest {
+  string login = 1;
+}
+
+message AuthParamsResponse {
+  // AuthSalt нужна клиенту для вычисления Auth_Key из введенного пароля
+  bytes auth_salt = 1;
+}
+
+message RegisterRequest {
+  string login = 1;
+  bytes auth_key = 2;
+  bytes auth_salt = 3;
+  bytes encryption_salt = 4;
+}
+
+message RegisterResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message LoginRequest {
+  string login = 1;
+  bytes auth_key = 2;
+}
+
+message LoginResponse {
+  string token = 1; // JWT токен
+  // EncryptionSalt возвращается клиенту после успешного входа, чтобы клиент
+  // мог вычислить Master_Key = Argon2id(password, encryption_salt)
+  bytes encryption_salt = 2;
+}
+
+message PingRequest {
+  string message = 1;
+}
+
+message PingResponse {
+  string message = 1;
+  string version = 2;
+}
+
+// Сообщения данных
+
+enum DataType {
+  UNKNOWN = 0;
+  TEXT = 1;        // Произвольные текстовые данные
+  BINARY = 2;      // Файлы, фото и т.п.
+  BANK_CARD = 3;   // Информация о банковских картах
+  CREDENTIALS = 4; // Пары логин/пароль
+}
+
+message AddDataRequest {
+  DataType type = 1;
+  bytes encrypted_data = 2; // EncryptedObject (serialized json or protobuf)
+  string meta_info = 3;     // JSON с именем файла, размером и т.д.
+}
+
+message AddDataResponse {
+  string id = 1; // UUID созданной записи
+}
+
+message ListDataRequest {
+  // Опциональный фильтр по типу
+  DataType type_filter = 1; 
+}
+
+message DataRecordInfo {
+  string id = 1;
+  DataType type = 2;
+  string meta_info = 3;
+  string created_at = 4; // RFC3339 timestamp
+}
+
+message ListDataResponse {
+  repeated DataRecordInfo items = 1;
+}
+
+message GetDataRequest {
+  string id = 1;
+}
+
+message GetDataResponse {
+  string id = 1;
+  DataType type = 2;
+  bytes encrypted_data = 3;
+  string meta_info = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}
+
+message DeleteDataRequest {
+  string id = 1;
+}
+
+message DeleteDataResponse {
+  bool success = 1;
+}
+
+// Инструкция по генерации:
+// protoc --go_out=gen/proto --go_opt=paths=source_relative \
+// --go-grpc_out=gen/proto --go-grpc_opt=paths=source_relative \
+// -I proto proto/securawr.proto
