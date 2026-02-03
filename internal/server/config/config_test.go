@@ -213,3 +213,78 @@ func TestParseFlags_Precedence(t *testing.T) {
 		t.Errorf("Precedence fail: expected File val %s, got %s", filePort, cfg.GRPCPort)
 	}
 }
+
+func TestInitConfig_Priority(t *testing.T) {
+	oldArgs := os.Args
+	defer func() { os.Args = oldArgs }()
+
+	tests := []struct {
+		name     string
+		args     []string
+		env      map[string]string
+		wantPort string
+		wantDSN  string
+	}{
+		{
+			name:     "Default values",
+			args:     []string{"cmd"},
+			wantPort: ":8080",                                                                     // defaultGRPCPort
+			wantDSN:  "postgres://postgres:postgres@localhost:5432/securawr_test?sslmode=disable", // defaultDSN
+		},
+		{
+			name:     "Flags priority",
+			args:     []string{"cmd", "-port", ":9999", "-dsn", "postgres://flag_db"},
+			wantPort: ":9999",
+			wantDSN:  "postgres://flag_db",
+		},
+		{
+			name: "Env priority (over defaults)",
+			args: []string{"cmd"},
+			env: map[string]string{
+				"GRPC_PORT":    ":7777",
+				"DATABASE_DSN": "postgres://env_db",
+			},
+			wantPort: ":7777",
+			wantDSN:  "postgres://env_db",
+		},
+		{
+			name: "Flags override Env (Flag > Env)",
+			args: []string{"cmd", "-port", ":1111"},
+			env: map[string]string{
+				"GRPC_PORT": ":2222",
+			},
+			wantPort: ":1111", // Должен победить флаг
+			wantDSN:  "postgres://postgres:postgres@localhost:5432/securawr_test?sslmode=disable",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// 1. Сброс глобального состояния флагов
+			flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+
+			// 2. Установка аргументов
+			os.Args = tt.args
+
+			// 3. Установка переменных окружения
+			os.Clearenv()
+			for k, v := range tt.env {
+				t.Setenv(k, v)
+			}
+
+			// 4. Вызов внутренней функции parseFlags
+			cfg, err := parseFlags()
+			if err != nil {
+				t.Fatalf("parseFlags() unexpected error: %v", err)
+			}
+
+			// 5. Проверки полей (используем GRPCPort и DSN)
+			if cfg.GRPCPort != tt.wantPort {
+				t.Errorf("GRPCPort = %q, want %q", cfg.GRPCPort, tt.wantPort)
+			}
+			if cfg.DSN != tt.wantDSN {
+				t.Errorf("DSN = %q, want %q", cfg.DSN, tt.wantDSN)
+			}
+		})
+	}
+}
