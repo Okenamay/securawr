@@ -8,8 +8,10 @@ import (
 	"os"
 	"strings"
 	"syscall"
+	"unicode"
 
 	"github.com/Okenamay/securawr/internal/client/grpcclient"
+	"github.com/Okenamay/securawr/internal/client/storage"
 	"github.com/Okenamay/securawr/internal/crypto"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
@@ -20,11 +22,30 @@ var authCmd = &cobra.Command{
 	Short: "Authentication commands (register, login)",
 }
 
+// validatePassword проверяет сложность пароля
+func validatePassword(pass string) error {
+	if len(pass) < 8 {
+		return fmt.Errorf("password too short (min 8 chars)")
+	}
+	var hasLetter, hasDigit bool
+	for _, c := range pass {
+		if unicode.IsLetter(c) {
+			hasLetter = true
+		}
+		if unicode.IsDigit(c) {
+			hasDigit = true
+		}
+	}
+	if !hasLetter || !hasDigit {
+		return fmt.Errorf("password must contain both letters and digits")
+	}
+	return nil
+}
+
 var registerCmd = &cobra.Command{
 	Use:   "register",
 	Short: "Register a new user",
 	Run: func(cmd *cobra.Command, args []string) {
-		// Используем ConfigManager вместо cfg
 		client, err := grpcclient.NewClient(ConfigManager.GetServerAddress(), ConfigManager.GetCertFile())
 		if err != nil {
 			fmt.Printf("Error connecting to server: %v\n", err)
@@ -34,9 +55,20 @@ var registerCmd = &cobra.Command{
 
 		// 1. Ввод логина и пароля
 		login := prompt("Enter login: ")
+		if len(login) < 4 {
+			fmt.Println("login is too short (min 4 chars)")
+			return
+		}
+
 		password := promptPassword("Enter password: ")
 		if login == "" || password == "" {
-			fmt.Println("Login and password cannot be empty")
+			fmt.Println("login and password cannot be empty")
+			return
+		}
+
+		// Проверка сложности пароля
+		if err := validatePassword(password); err != nil {
+			fmt.Printf("Invalid password: %v\n", err)
 			return
 		}
 
@@ -109,11 +141,13 @@ var loginCmd = &cobra.Command{
 			return
 		}
 
-		// 5. Сохранение результата в конфиг
-		if err := ConfigManager.SetToken(token); err != nil {
-			fmt.Printf("Failed to save token: %v\n", err)
-			return
+		// 5. Сохранение токена в Keyring
+		if err := storage.SaveToken(token); err != nil {
+			fmt.Printf("Warning: failed to save token to system keyring: %v\n", err)
+		} else {
+			fmt.Println("Token saved to secure system storage.")
 		}
+
 		if err := ConfigManager.SetEncryptionSalt(hex.EncodeToString(encSalt)); err != nil {
 			fmt.Printf("Failed to save encryption salt: %v\n", err)
 			return

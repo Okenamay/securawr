@@ -2,19 +2,23 @@ package storage
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
 	"time"
 
+	"github.com/zalando/go-keyring"
 	"go.etcd.io/bbolt"
 )
 
 const (
-	dirName    = ".securawr"
-	dbName     = "storage.db"
-	bucketName = "files" // Имя bucket (таблицы) для файлов
+	dirName     = ".securawr"
+	dbName      = "storage.db"
+	bucketName  = "files"        // Имя bucket (таблицы) для файлов
+	serviceName = "SecurawrApp"  // Имя сервиса для Keyring
+	userKey     = "current_user" // Ключ пользователя для Keyring
 )
 
 // LocalRecord - структура для хранения метаданных файла локально. Она похожа
@@ -227,4 +231,33 @@ func (s *Storage) Delete(id string) error {
 		b := tx.Bucket([]byte(bucketName))
 		return b.Delete([]byte(id))
 	})
+}
+
+// SaveToken сохраняет токен авторизации в системное безопасное хранилище
+// (Keyring)
+func SaveToken(token string) error {
+	if token == "" {
+		return errors.New("token is empty")
+	}
+
+	// Сохраняем в Keyring
+	err := keyring.Set(serviceName, userKey, token)
+	if err != nil {
+		return fmt.Errorf("failed to save token to system keyring: %w", err)
+	}
+
+	return nil
+}
+
+// GetToken получает токен авторизации из системного безопасного хранилища
+func GetToken() (string, error) {
+	token, err := keyring.Get(serviceName, userKey)
+	if err != nil {
+		if errors.Is(err, keyring.ErrNotFound) {
+			return "", fmt.Errorf("auth token not found (please login first)")
+		}
+		return "", fmt.Errorf("failed to retrieve token from system keyring: %w", err)
+	}
+
+	return token, nil
 }
