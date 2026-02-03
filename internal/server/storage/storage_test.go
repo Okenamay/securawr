@@ -17,7 +17,6 @@ import (
 func getTestDSN() string {
 	dsn := os.Getenv("TEST_DATABASE_DSN")
 	if dsn == "" {
-		// ЗАМЕНИТЕ 'postgres' НА ВАШ ПАРОЛЬ, если он другой
 		dsn = "postgres://postgres:postgres@localhost:5432/securawr_test?sslmode=disable"
 	}
 	return dsn

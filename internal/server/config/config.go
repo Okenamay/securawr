@@ -11,7 +11,7 @@ import (
 // Дефолтные значения до применения флагов:
 const (
 	defaultGRPCPort     = ":8080"
-	defaultDSN          = "postgres://user:pass@localhost:5432/securawr?sslmode=disable"
+	defaultDSN          = "postgres://postgres:postgres@localhost:5432/securawr_test?sslmode=disable"
 	defaultLogLevel     = "info"
 	defaultServerPepper = "Cayenne&blacK"
 	defaultJWTSecret    = "3hvost@kotyaki:Qu#Oli#Ma@2025!"

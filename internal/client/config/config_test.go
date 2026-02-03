@@ -121,7 +121,7 @@ func TestConfigManager_CorruptFile(t *testing.T) {
 	// 1. Создаем валидный менеджер, чтобы узнать путь к файлу
 	_, _ = New()
 
-	configDir := filepath.Join(tmpDir, "securawr") // Стандарт для XDG/AppData
+	configDir := filepath.Join(tmpDir, ".securawr")
 	if err := os.MkdirAll(configDir, 0755); err != nil {
 		t.Fatal(err)
 	}

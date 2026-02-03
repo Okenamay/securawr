@@ -5,6 +5,7 @@ import (
 	"crypto/subtle"
 	"encoding/base64"
 	"fmt"
+	"strings"
 
 	"golang.org/x/crypto/argon2"
 )
@@ -50,8 +51,7 @@ func VerifyPassword(password, pepper, storedHash string) (bool, error) {
 	return CheckAuthKey([]byte(password), pepper, storedHash)
 }
 
-// HashAuthKey принимает Auth_Key (полученный от клиента) и Server_Pepper
-// Возвращает хеш в формате PHC для сохранения в БД
+// HashAuthKey принимает Auth_Key и Server_Pepper
 func HashAuthKey(authKey []byte, pepper string) (string, error) {
 	// 1. Генерируем случайную соль для этого хеша (хранится в поле
 	// password_hash)
@@ -80,15 +80,35 @@ func HashAuthKey(authKey []byte, pepper string) (string, error) {
 
 // CheckAuthKey проверяет валидность ключа
 func CheckAuthKey(authKey []byte, pepper string, storedHash string) (bool, error) {
-	var version, memory, time, threads int
-	var b64Salt, b64Hash string
-
-	// Парсим строку хеша
-	_, err := fmt.Sscanf(storedHash, "$argon2id$v=%d$m=%d,t=%d,p=%d$%[^$]$%s",
-		&version, &memory, &time, &threads, &b64Salt, &b64Hash)
-	if err != nil {
-		return false, fmt.Errorf("invalid hash format: %w", err)
+	// Разбиваем строку по разделителю "$"
+	// Ожидаемый формат: $argon2id$v=19$m=65536,t=1,p=2$salt$hash
+	// Split выдаст: ["", "argon2id", "v=19", "m=...,t=...,p=...", "salt", "hash"]
+	parts := strings.Split(storedHash, "$")
+	if len(parts) != 6 {
+		return false, fmt.Errorf("invalid hash format")
 	}
+
+	if parts[1] != "argon2id" {
+		return false, fmt.Errorf("incompatible variant: %s", parts[1])
+	}
+
+	var version int
+	_, err := fmt.Sscanf(parts[2], "v=%d", &version)
+	if err != nil {
+		return false, fmt.Errorf("failed to parse version: %w", err)
+	}
+	if version != argon2.Version {
+		return false, fmt.Errorf("incompatible version: %d", version)
+	}
+
+	var memory, time, threads int
+	_, err = fmt.Sscanf(parts[3], "m=%d,t=%d,p=%d", &memory, &time, &threads)
+	if err != nil {
+		return false, fmt.Errorf("failed to parse params: %w", err)
+	}
+
+	b64Salt := parts[4]
+	b64Hash := parts[5]
 
 	salt, err := base64.RawStdEncoding.DecodeString(b64Salt)
 	if err != nil {

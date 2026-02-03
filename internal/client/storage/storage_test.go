@@ -32,9 +32,6 @@ func TestStorage_CRUD(t *testing.T) {
 		ID:        "rec-1",
 		Name:      "test.txt",
 		CreatedAt: time.Now(),
-		// Важно: BoltDB хранит данные как JSON.
-		// Если вы используете reflect.DeepEqual в тестах, учитывайте точность времени.
-		// При json unmarshal time.Time может потерять наносекунды.
 	}
 
 	// 1. Create (Save)
@@ -116,13 +113,13 @@ func TestStorage_LRU_Quota(t *testing.T) {
 		t.Fatalf("Failed to save rec 1: %v", err)
 	}
 	// Ждем, чтобы LastAccess различался
-	time.Sleep(10 * time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
 
 	// 2. Сохраняем вторую запись
 	if err := store.Save(createRec("2")); err != nil {
 		t.Fatalf("Failed to save rec 2: %v", err)
 	}
-	time.Sleep(10 * time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
 
 	// Сейчас в базе ~2600 байт из 3000.
 	// Обновим запись 1, чтобы она стала "свежей" (LastAccess)
