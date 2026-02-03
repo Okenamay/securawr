@@ -193,3 +193,53 @@ func TestClient_DataMethods(t *testing.T) {
 		t.Errorf("AddData returned unexpected ID: %s", resp.Id)
 	}
 }
+
+func TestClient_DataMethods_Extended(t *testing.T) {
+	// Расширяем мок для поддержки новых методов
+	mockData := &mockDataServer{}
+
+	addr, stop := startTestServer(t, &mockAuthServer{}, mockData)
+	defer stop()
+
+	client, err := NewClient(addr, "")
+	if err != nil {
+		t.Fatalf("NewClient failed: %v", err)
+	}
+	defer client.Close()
+	ctx := context.Background()
+
+	// 1. ListData
+	_, err = client.ListData(ctx, &pb.ListDataRequest{
+		TypeFilter: pb.DataType_TEXT, // 1 соответствует TEXT
+	})
+	if err != nil {
+		t.Errorf("ListData failed: %v", err)
+	}
+
+	// 2. GetData
+	_, err = client.GetData(ctx, &pb.GetDataRequest{
+		Id: "some-uuid",
+	})
+	if err != nil {
+		t.Errorf("GetData failed: %v", err)
+	}
+
+	// 3. DeleteData
+	_, err = client.DeleteData(ctx, &pb.DeleteDataRequest{
+		Id: "some-uuid",
+	})
+	if err != nil {
+		t.Errorf("DeleteData failed: %v", err)
+	}
+}
+
+// Дополним mockDataServer методами
+func (m *mockDataServer) ListData(ctx context.Context, req *pb.ListDataRequest) (*pb.ListDataResponse, error) {
+	return &pb.ListDataResponse{Items: []*pb.DataRecordInfo{}}, nil
+}
+func (m *mockDataServer) GetData(ctx context.Context, req *pb.GetDataRequest) (*pb.GetDataResponse, error) {
+	return &pb.GetDataResponse{Id: req.Id}, nil
+}
+func (m *mockDataServer) DeleteData(ctx context.Context, req *pb.DeleteDataRequest) (*pb.DeleteDataResponse, error) {
+	return &pb.DeleteDataResponse{Success: true}, nil
+}

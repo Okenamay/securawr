@@ -17,6 +17,7 @@ func setupEnv(t *testing.T) string {
 	t.Setenv("HOME", tmpDir)
 	// Windows
 	t.Setenv("APPDATA", tmpDir)
+	t.Setenv("USERPROFILE", tmpDir)
 
 	return tmpDir
 }
@@ -39,8 +40,7 @@ func TestConfigManager_Lifecycle(t *testing.T) {
 		t.Logf("First Load returned error (might be expected): %v", err)
 	}
 
-	// Проверяем дефолтные значения (ожидаем, что они не пустые, если заданы в коде)
-	// Например, адрес сервера обычно имеет дефолт
+	// Проверяем дефолтные значения
 	if addr := mgr.GetServerAddress(); addr == "" {
 		t.Log("Notice: ServerAddress is empty by default")
 	}
@@ -49,18 +49,29 @@ func TestConfigManager_Lifecycle(t *testing.T) {
 	testToken := "test-jwt-token-123"
 	testSalt := "hex-salt-string"
 
-	// Тестируем SetToken (который должен сохранять на диск или в память)
+	// Тест SetServerAddress
+	newAddr := "192.168.1.1:5000"
+	if err := mgr.SetServerAddress(newAddr); err != nil {
+		t.Errorf("SetServerAddress failed: %v", err)
+	}
+	if got := mgr.GetServerAddress(); got != newAddr {
+		t.Errorf("GetServerAddress = %q, want %q", got, newAddr)
+	}
+
+	// Тест EncryptionSalt
+	if err := mgr.SetEncryptionSalt(testSalt); err != nil {
+		t.Errorf("SetEncryptionSalt failed: %v", err)
+	}
+	if got := mgr.GetEncryptionSalt(); got != testSalt {
+		t.Errorf("GetEncryptionSalt = %q, want %q", got, testSalt)
+	}
+
+	// Тестируем SetToken
 	if err := mgr.SetToken(testToken); err != nil {
 		t.Errorf("SetToken failed: %v", err)
 	}
-
 	if got := mgr.GetToken(); got != testToken {
 		t.Errorf("GetToken() immediately after Set = %q, want %q", got, testToken)
-	}
-
-	// Тестируем SetEncryptionSalt
-	if err := mgr.SetEncryptionSalt(testSalt); err != nil {
-		t.Errorf("SetEncryptionSalt failed: %v", err)
 	}
 
 	// 3. Проверка персистентности (Persistence)
@@ -76,11 +87,7 @@ func TestConfigManager_Lifecycle(t *testing.T) {
 		t.Fatalf("Load() failed on 2nd instance: %v", err)
 	}
 
-	// Внимание: Используется только keyring) — этот assert упадёт, и это
-	// нормально (токен проверяется отдельно)
-	// Но соль шифрования обязана быть в файле
-
-	// Проверяем токен (если реализация пишет его в файл)
+	// Проверяем, сохранился ли токен (если реализация пишет его в файл конфига)
 	if mgr2.GetToken() == testToken {
 		t.Log("Token persistence confirmed via file")
 	}
@@ -93,7 +100,6 @@ func TestConfigManager_Lifecycle(t *testing.T) {
 
 	// Проверяем, что путь к кешу формируется внутри нашей временной папки,
 	// а не в реальной домашней директории
-	// (Это косвенно подтверждает, что setupEnv сработал)
 	if mgr.GetCertFile() == "" {
 		t.Log("Notice: GetCertFile() is empty")
 	}

@@ -62,7 +62,7 @@ func TestCheckAuthKey_InvalidInputs(t *testing.T) {
 	pepper := "p"
 	key := []byte("key")
 
-	// Тесты на битые хеши
+	// Базовые тесты на битые хеши
 	tests := []struct {
 		name string
 		hash string
@@ -82,6 +82,64 @@ func TestCheckAuthKey_InvalidInputs(t *testing.T) {
 			}
 			if err == nil {
 				t.Error("Expected error, got nil")
+			}
+		})
+	}
+}
+
+// TestCheckAuthKey_DetailedErrors проверяет конкретные сообщения об ошибках
+// для повышения покрытия (coverage) валидации формата хеша.
+func TestCheckAuthKey_DetailedErrors(t *testing.T) {
+	key := []byte("key")
+	pepper := "p"
+
+	tests := []struct {
+		name      string
+		hash      string
+		wantError string // Часть текста ошибки, которую мы ожидаем
+	}{
+		{
+			"Invalid parts count",
+			"$argon2id$v=19$m=64", // Слишком мало частей (меньше 6)
+			"invalid hash format",
+		},
+		{
+			"Wrong variant",
+			"$bcrypt$v=19$m=1,t=1,p=1$salt$hash", // Не argon2id
+			"incompatible variant",
+		},
+		{
+			"Wrong version",
+			"$argon2id$v=99$m=1,t=1,p=1$salt$hash", // Неподдерживаемая версия
+			"incompatible version",
+		},
+		{
+			"Bad params format",
+			"$argon2id$v=19$m=BAD,t=1,p=1$salt$hash", // Ошибка парсинга чисел
+			"failed to parse params",
+		},
+		{
+			"Bad salt encoding",
+			"$argon2id$v=19$m=65536,t=1,p=2$NOT_BASE64$hash", // Соль не base64
+			"invalid salt encoding",
+		},
+		{
+			"Bad hash encoding",
+			"$argon2id$v=19$m=65536,t=1,p=2$c2FsdA$NOT_BASE64", // Хеш не base64 (c2FsdA = "salt")
+			"invalid hash encoding",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			valid, err := CheckAuthKey(key, pepper, tt.hash)
+			if valid {
+				t.Error("Expected valid=false")
+			}
+			if err == nil {
+				t.Error("Expected error, got nil")
+			} else if !strings.Contains(err.Error(), tt.wantError) {
+				t.Errorf("Error %q does not contain expected substring %q", err.Error(), tt.wantError)
 			}
 		})
 	}

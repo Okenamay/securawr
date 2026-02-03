@@ -86,14 +86,15 @@ func TestStorage_CRUD(t *testing.T) {
 
 func TestStorage_LRU_Quota(t *testing.T) {
 	// Создаем записи определенного размера
-	// Пустая LocalRecord в JSON весит около 150-200 байт (зависит от полей).
+	// Пустая LocalRecord в JSON весит около 150-200 байт (зависит от полей)
 	// Добавим payload, чтобы управлять размером.
-	payloadSize := 1000
+	payloadSize := 700
 	payload := make([]byte, payloadSize)
 
-	// Установим квоту, которой хватит на 2 записи, но не на 3.
-	// 1 запись ~= 1300 байт (ключ + json с payload).
-	// Квота = 3000 байт.
+	// Установим квоту, которой хватит на 2 записи, но не на 3
+	// 1 запись ~= 1200 байт (ключ + json с payload, с учётом того, что в
+	// Base64 payload вырастет примерно на 33%)
+	// Квота = 3000 байт
 	quota := int64(3000)
 
 	store, teardown := setupTestDB(t, quota)
@@ -113,20 +114,20 @@ func TestStorage_LRU_Quota(t *testing.T) {
 		t.Fatalf("Failed to save rec 1: %v", err)
 	}
 	// Ждем, чтобы LastAccess различался
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(200 * time.Millisecond)
 
 	// 2. Сохраняем вторую запись
 	if err := store.Save(createRec("2")); err != nil {
 		t.Fatalf("Failed to save rec 2: %v", err)
 	}
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(200 * time.Millisecond)
 
 	// Сейчас в базе ~2600 байт из 3000.
 	// Обновим запись 1, чтобы она стала "свежей" (LastAccess)
-	// Тогда при вытеснении должна удалиться запись 2 (как самая старая по доступу)?
-	// Нет, стоп. Get обновляет LastAccess.
-	_, _ = store.Get("1") // Теперь "1" самая свежая
-	time.Sleep(10 * time.Millisecond)
+	if _, err := store.Get("1"); err != nil { // Теперь "1" самая свежая
+		t.Fatalf("Failed to refresh record 1: %v", err)
+	}
+	time.Sleep(200 * time.Millisecond)
 
 	// 3. Пытаемся сохранить третью запись. Места нет.
 	// Должна удалиться самая старая (LastAccess).
