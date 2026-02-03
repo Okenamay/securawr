@@ -50,6 +50,16 @@ func (h *DataHandler) AddData(ctx context.Context, req *pb.AddDataRequest) (*pb.
 		return nil, status.Error(codes.InvalidArgument, "empty data payload")
 	}
 
+	// Проверка размера единичного файла
+	if int64(len(req.EncryptedData)) > h.conf.MaxFileSize {
+		h.logger.Warn("rejected file exceeds max size limit",
+			zap.Int("size", len(req.EncryptedData)),
+			zap.Int64("limit", h.conf.MaxFileSize),
+			zap.String("user_id", userIDStr),
+		)
+		return nil, status.Errorf(codes.InvalidArgument, "file size %d exceeds limit %d", len(req.EncryptedData), h.conf.MaxFileSize)
+	}
+
 	// 3. Проверка квот
 	// Сначала узнаем текущее потребление места пользователем
 	currentUsage, err := h.storage.GetUserUsage(ctx, userID)
@@ -59,7 +69,7 @@ func (h *DataHandler) AddData(ctx context.Context, req *pb.AddDataRequest) (*pb.
 	}
 
 	// Считаем размер новых данных
-	newDataSize := int64(len(req.EncryptedData) + len(req.EncryptedKey))
+	newDataSize := int64(len(req.EncryptedData))
 
 	// Проверяем превышение лимита
 	if currentUsage+newDataSize > h.conf.UserQuota {

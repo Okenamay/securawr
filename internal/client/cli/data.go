@@ -13,6 +13,7 @@ import (
 
 	pb "github.com/Okenamay/securawr/gen/proto"
 	"github.com/Okenamay/securawr/internal/client/grpcclient"
+	"github.com/Okenamay/securawr/internal/client/storage"
 )
 
 var (
@@ -40,10 +41,58 @@ var addCmd = &cobra.Command{
 			return fmt.Errorf("you are not logged in. Run 'securawr login' first")
 		}
 
+		// Проверка размера файла перед чтением
+		fileInfo, err := os.Stat(filePath)
+		if err != nil {
+			return fmt.Errorf("failed to get file info: %w", err)
+		}
+
+		if fileInfo.Size() > ConfigManager.GetMaxFileSize() {
+			return fmt.Errorf("file size (%d bytes) exceeds the limit of %d bytes", fileInfo.Size(), ConfigManager.GetMaxFileSize())
+		}
+
 		// 2. Читаем файл
 		data, err := os.ReadFile(filePath)
 		if err != nil {
 			return fmt.Errorf("failed to read file: %w", err)
+		}
+
+		filename := filepath.Base(filePath)
+
+		// Формируем JSON метаданные
+		meta := FileMeta{
+			Name:        filename,
+			Description: description,
+		}
+		metaJSON, err := json.Marshal(meta)
+		if err != nil {
+			return fmt.Errorf("failed to encode metadata: %w", err)
+		}
+
+		// Сохранение в локальный кеш (LRU)
+		// Используем StoragePath и LocalCacheSize из конфигурации
+		kvStore, err := storage.NewStorage(ConfigManager.GetStoragePath(), ConfigManager.GetLocalCacheSize())
+		if err != nil {
+			// Логируем ошибку, но не прерываем работу (кеш опционален для upload)
+			fmt.Printf("Warning: failed to open local cache: %v\n", err)
+		} else {
+			defer kvStore.Close()
+
+			record := storage.LocalRecord{
+				ID:            filename,
+				Type:          int32(pb.DataType_BINARY),
+				Name:          filename,
+				Description:   description,
+				CreatedAt:     time.Now(),
+				EncryptedData: data,
+			}
+
+			err = kvStore.Save(record)
+			if err != nil {
+				fmt.Printf("Warning: failed to save to local cache: %v\n", err)
+			} else {
+				fmt.Println("File cached locally.")
+			}
 		}
 
 		// 3. Подключаемся к серверу
@@ -59,43 +108,13 @@ var addCmd = &cobra.Command{
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
-		filename := filepath.Base(filePath)
 		fmt.Printf("Uploading '%s' (%d bytes)...\n", filename, len(data))
-
-		// Формируем JSON метаданные
-		meta := FileMeta{
-			Name:        filename,
-			Description: description,
-		}
-		metaJSON, err := json.Marshal(meta)
-		if err != nil {
-			return fmt.Errorf("failed to encode metadata: %w", err)
-		}
 
 		req := &pb.AddDataRequest{
 			Type:          pb.DataType_BINARY,
 			EncryptedData: data,
 			MetaInfo:      string(metaJSON),
 		}
-
-		// Добавляем токен в метаданные контекста через интерцептор (если он есть)
-		// или просто надеемся, что grpcclient сам подставит его?
-		// В grpcclient.NewClient мы не передавали токен. Нужно либо передавать его
-		// в NewClient, либо в каждый вызов.
-		// В текущей реализации grpcclient.NewClient не принимает токен.
-		// Поэтому мы должны использовать interceptor. Но пока используем "как есть",
-		// предполагая, что вы добавите AuthInterceptor в grpcclient позже.
-		// ВАЖНО: Сейчас grpcclient.NewClient(addr, cert) не знает о токене.
-		// Вам нужно либо обновить grpcclient.go, чтобы он принимал токен,
-		// либо использовать grpc.WithPerRPCCredentials.
-
-		// В вашей предыдущей версии data.go вы передавали getToken() в NewClient.
-		// Я вернул эту логику, но с обновленным NewClient, если вы его обновили.
-		// Если нет - давайте обновим вызов с учетом того, что NewClient принимает (string, string).
-
-		// ВРЕМЕННОЕ РЕШЕНИЕ:
-		// Если grpcclient не поддерживает токен, сервер вернет Unauthenticated.
-		// Но пока оставим так, чтобы скомпилировалось.
 
 		resp, err := conn.AddData(ctx, req)
 		if err != nil {

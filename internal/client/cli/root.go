@@ -75,7 +75,7 @@ func initApp() error {
 	}
 
 	// 2. Инициализация локальной БД BoltDB
-	LocalStorage, err = storage.New()
+	LocalStorage, err = storage.NewStorage(ConfigManager.GetStoragePath(), ConfigManager.GetLocalCacheSize())
 	if err != nil {
 		return fmt.Errorf("failed to init local storage: %w", err)
 	}

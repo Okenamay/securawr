@@ -60,12 +60,13 @@ func (s *Storage) CreateDataRecord(ctx context.Context, r DataRecord) error {
 	return nil
 }
 
-// ListDataRecords возвращает список записей пользователя
+// ListDataRecords возвращает список записей пользователя (без самих данных)
 func (s *Storage) ListDataRecords(ctx context.Context, userID uuid.UUID) ([]DataRecord, error) {
 	query := `
 		SELECT id, user_id, data_type, data_blob, meta_info, version, created_at, updated_at 
 		FROM data_records 
 		WHERE user_id = $1
+		ORDER BY created_at DESC
 	`
 	rows, err := s.Pool.Query(ctx, query, userID)
 	if err != nil {

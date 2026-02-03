@@ -28,6 +28,7 @@ type Config struct {
 	CertFile       string `json:"cert_file,omitempty"`
 	MaxFileSize    int64  `json:"max_file_size,omitempty"`
 	LocalCacheSize int64  `json:"local_cache_size,omitempty"`
+	StoragePath    string `json:"storage_path,omitempty"`
 }
 
 // Manager управляет загрузкой и сохранением конфигурации
@@ -183,4 +184,15 @@ func (m *Manager) GetLocalCacheSize() int64 {
 		return DefaultLocalCacheSize
 	}
 	return m.cfg.LocalCacheSize
+}
+
+// GetStoragePath возвращает путь к локальному хранилищу
+func (m *Manager) GetStoragePath() string {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	if m.cfg.StoragePath == "" {
+		home, _ := os.UserHomeDir()
+		return filepath.Join(home, dirName, "storage.db")
+	}
+	return m.cfg.StoragePath
 }
