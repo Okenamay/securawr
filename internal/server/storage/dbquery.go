@@ -122,7 +122,7 @@ func (s *Storage) DeleteDataRecord(ctx context.Context, id, userID uuid.UUID) er
 func (s *Storage) GetUserUsage(ctx context.Context, userID uuid.UUID) (int64, error) {
 	// Считаем сумму длин зашифрованных данных и ключей
 	query := `
-		SELECT COALESCE(SUM(octet_length(encrypted_data) + octet_length(encrypted_key)), 0)
+		SELECT COALESCE(SUM(octet_length(data_blob)), 0)
 		FROM data_records
 		WHERE user_id = $1
 	`

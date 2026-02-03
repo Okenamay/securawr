@@ -78,7 +78,7 @@ func HashAuthKey(authKey []byte, pepper string) (string, error) {
 	return encodedHash, nil
 }
 
-// CheckAuthKey проверяет валидность ключа.
+// CheckAuthKey проверяет валидность ключа
 func CheckAuthKey(authKey []byte, pepper string, storedHash string) (bool, error) {
 	var version, memory, time, threads int
 	var b64Salt, b64Hash string
