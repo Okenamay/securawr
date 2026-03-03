@@ -26,7 +26,7 @@ func New(conf *config.Config, log *zap.Logger) (*Storage, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	// Парсим конфигурацию пула (позволяет настроить макс. кол-во соединений и т.д. через DSN)
+	// Парсим конфигурацию пула
 	config, err := pgxpool.ParseConfig(conf.DSN)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse pgx config: %w", err)
@@ -67,7 +67,13 @@ func (s *Storage) Close() {
 	}
 }
 
-// Пример метода для пинга БД (Ping)
+// Ping проверяет доступность базы данных
 func (s *Storage) Ping(ctx context.Context) error {
-	return s.Pool.Ping(ctx)
+	err := s.Pool.Ping(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to ping database: %w", err)
+	}
+
+	s.log.Debug("Database pinged successfully")
+	return nil
 }

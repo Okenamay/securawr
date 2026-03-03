@@ -24,3 +24,6 @@ vendor/
 
 # Temporary backups
 .bak
+
+# Test coverage files
+.cov

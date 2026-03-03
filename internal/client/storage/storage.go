@@ -180,8 +180,7 @@ func (s *Storage) List() ([]LocalRecord, error) {
 		return b.ForEach(func(k, v []byte) error {
 			var rec LocalRecord
 			if err := json.Unmarshal(v, &rec); err != nil {
-				// Если одна запись битая, логируем или игнорируем, но здесь
-				// вернем ошибку
+				// Если одна запись битая, вернем ошибку
 				return fmt.Errorf("json unmarshal error for key %s: %w", k, err)
 			}
 			items = append(items, rec)
